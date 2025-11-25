@@ -68,7 +68,7 @@ Repository for MAD Assignment
 
 - **Language**: Kotlin
 - **Framework**: Android SDK, Jetpack Compose
-- **Architechture**:
+- **Architecture**:
 - **Navigation**: Jetpack Navigation
 - **Database**:
 - **Version Control**: Git & GitHub
@@ -82,6 +82,7 @@ Repository for MAD Assignment
 - Login Screen
 
 ### Joseph
+- Task Management
 - Biometric Login
 
 ### Monisha
