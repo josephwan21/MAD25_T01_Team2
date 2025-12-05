@@ -1,6 +1,5 @@
 # MAD25_T01_Team2
 Repository for MAD Assignment
-
 ---
 
 ## Team Members
@@ -17,7 +16,8 @@ Repository for MAD Assignment
 ---
 
 ## 1. Introduction & Purpose
-
+The NPAL2 platform serves as a key digital interface for Ngee Ann Polytechnic students, providing access to academic resources, administrative services, and campus-related information. However, the existing NPAL2 mobile application and respective web platform are often fragmented and inconsistent, resulting in a disjointed user experience. 
+Students must navigate multiple systems to perform basic tasks such as checking timetables, managing assignments, accessing campus facilities, or viewing announcements. Not to mention, the inconsistency in terms of functionality, especially when the database or the backend returns unknown/unfound issues. Furthermore, the current application interface is outdated and lacks modern usability features expected by today’s mobile users.
 ---
 
 ## 2. Motivation & Objectives
@@ -37,31 +37,37 @@ Repository for MAD Assignment
 ### 1. Authetication & User Access 
 
 #### 1.1 Login with NP Credentials
+Allows students to securely log in using their NP username and password, providing access to personalised academic and campus services.
 #### 1.2 First Time Student Set-Up Page
+Guides new students through initial account setup
 #### 1.3 Biometric Login
+Enables secure and convenient access using the user's fingerprint, reducing the need to repeatedly enter login credentials. To account for specific devices that may not have this feature, users will still be defaulted to entering their user account credentials.
 
 ### 2. Student Identity & Campus Access
 
 #### 2.1 Digital Student Card
+A digital version of the student ID that can be used for identification purposes, campus access and library borrowing, reducing the need to constantly rely on physical cards.
 
 ### 3. Academic & Student Life Tools
 
 #### 3.1 Student Calendar
+Integrates class schedules, exam dates, and campus events into a unified calendar, helping students manage their time effectively.
 #### 3.2 Task Management
-
+Allows student to track assignments, projects, and personal tasks, with reminders and deadlines to faciliate productivity and planning.
 ### 4. Campus Navigation & Facilities
 
 #### 4.1 Interactive Campus Map
-
+Provides a detailed, interactive map of the campus with navigation features, showing locations of classrooms, labs, administrative offices, and amenities.
 ### 5. Notifications & Alerts
-
+Sends real-time updates about timetable changes, announcements, deadlines, and campus alerts/information, ensuring students stay informed about important events.
 ### 6. Security & Account Protection
 
 #### 6.1 Encrypted Login
+Ensures that all login and personal data are encrypted, safeguarding student information from unauthorised access.
 #### 6.2 Biometric Authentication
-
+Adds an extra layer of security with fingerprint, making the login process both safe and convenient.
 ### 7. Settings & Personalization
-
+Allows students to customise app preferences, notification settings, and display options, creating a tailored and comfortable user experience.
 ---
 
 ## 4. Technologies Used
