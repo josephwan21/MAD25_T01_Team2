@@ -12,7 +12,7 @@ Repository for MAD Assignment
 
 ## Project Title
 # **NPAL2 — Android Mobile Application Re-Design**
-
+NPal2 - Ngee Ann Polytechnic -- a Central Pulse, Within Reach
 ---
 
 ## 1. Introduction & Purpose
@@ -37,7 +37,7 @@ Not to mention, the inconsistency in functionality, especially apparent when the
 
 ## 3. Key Features
 
-### 1. Authetication & User Access 
+### 1. Authentication & User Access 
 
 #### 1.1 Login with NP Credentials
 Allows students to securely log in using their NP username and password, providing access to personalised academic and campus services.
