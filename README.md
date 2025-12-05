@@ -104,6 +104,9 @@ Allows students to customise app preferences, notification settings, and display
 ---
 
 ## 6. LLM Usage Declaration
+For the development phase of the assignment, our team plans to use a Large Language Model, specifically, ChatGPT (GPT-5 mini) in this case, to provide guidance, suggest coding or design approaches, and help structure technical documentation. 
+
+All outputs from the LLM will be reviewed, adapted, and verified by team members to ensure they accurately reflect our understanding and project direction. The LLM will serve strictly as a supportive tool, and all final coding, design, and implementation will be done by the team.
 
 ---
 
