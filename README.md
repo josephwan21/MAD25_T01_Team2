@@ -13,6 +13,7 @@ Repository for MAD Assignment
 ## Project Title
 # **NPAL2 — Android Mobile Application Re-Design**
 NPal2 - Ngee Ann Polytechnic 
+
 A Central Pulse, Within Reach
 
 ---
