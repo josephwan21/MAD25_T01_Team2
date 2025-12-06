@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
 
-class LoginScreen : ComponentActivity() {
+/*class LoginScreen : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -53,7 +53,7 @@ class LoginScreen : ComponentActivity() {
             }
         }
     }
-}
+}*/
 
 @Composable
 fun LoginScreen(

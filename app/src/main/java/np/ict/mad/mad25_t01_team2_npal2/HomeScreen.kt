@@ -22,14 +22,14 @@ import androidx.compose.ui.unit.sp
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
 import kotlin.jvm.java
 
-class HomeScreen : ComponentActivity() {
+/*class HomeScreen : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             MAD25_T01_Team2_NPAL2Theme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    HomeScreen(
+                    HomeScreenContent(
                         onTaskClick = {
                             // Navigate to TaskListScreen Activity
                             val intent = Intent(this@HomeScreen, TaskListScreen::class.java)
@@ -41,10 +41,10 @@ class HomeScreen : ComponentActivity() {
             }
         }
     }
-}
+}*/
 
 @Composable
-fun HomeScreen(
+fun HomeScreenContent(
     onTaskClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
