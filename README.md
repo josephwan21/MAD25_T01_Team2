@@ -81,9 +81,9 @@ Allows students to customise app preferences, notification settings, and display
 
 - **Language**: Kotlin
 - **Framework**: Android SDK, Jetpack Compose
-- **Architecture**:
+- **Architecture**: Model-View-ViewModel (MVVM)
 - **Navigation**: Jetpack Navigation
-- **Database**:
+- **Database**: Google Firebase Firestore
 - **Version Control**: Git & GitHub
 - **Design Tools**: Figma & Procreate
 
