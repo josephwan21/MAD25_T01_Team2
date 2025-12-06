@@ -43,7 +43,7 @@ class LoginScreen : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     LoginScreen(
                         onLoginSuccess = {
-                            val intent = Intent(this@LoginScreen, MainActivity::class.java)
+                            val intent = Intent(this@LoginScreen, HomeScreen::class.java)
                             startActivity(intent)
                         },
                         modifier = Modifier.padding(innerPadding)
