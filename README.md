@@ -118,5 +118,7 @@ All outputs from the LLM will be reviewed, adapted, and verified by team members
 ---
 
 ## 7. Screenshots / UI Mockups
-
+![Mockup](images/MockupLoginPage.jpg)
+![Mockup](images/MockupHomePage.jpg)
+![Mockup](images/MockupTaskManagement.jpg)
 
