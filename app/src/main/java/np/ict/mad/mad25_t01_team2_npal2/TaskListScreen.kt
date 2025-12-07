@@ -1,9 +1,13 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,15 +20,36 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
+import java.util.Calendar
 
 /*class TaskListScreen : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +77,10 @@ fun TaskListScreenContent(modifier: Modifier = Modifier) {
 }*/
 
 @Composable
-fun TaskListScreenContent(modifier: Modifier = Modifier) {
+fun TaskListScreenContent(
+    onCreateTask: () -> Unit,
+    modifier: Modifier = Modifier
+) {
 
     val monthYear = "November 2025"
 
@@ -75,80 +103,93 @@ fun TaskListScreenContent(modifier: Modifier = Modifier) {
         16 to "Consultation with Lecturer"
     )
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Month + Year
-        Text(
-            text = monthYear,
-            style = MaterialTheme.typography.headlineMedium
-        )
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = onCreateTask) {
+                Icon(Icons.Default.Add, contentDescription = "Create Task")
+            }
+        }
+    ) { innerPadding ->
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp)
+        ) {
+            // Month + Year
+            Text(
+                text = monthYear,
+                style = MaterialTheme.typography.headlineMedium
+            )
 
-        // 7-day selector row
-        LazyRow {
-            items(days) { (day, date) ->
-                Card(
-                    modifier = Modifier
-                        .padding(end = 8.dp)
-                        .width(70.dp)
-                        .height(70.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.Center
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 7-day selector row
+            LazyRow {
+                items(days) { (day, date) ->
+                    Card(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .width(70.dp)
+                            .height(70.dp),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text(day, style = MaterialTheme.typography.bodyMedium)
-                        Text(date.toString(), style = MaterialTheme.typography.titleMedium)
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(day, style = MaterialTheme.typography.bodyMedium)
+                            Text(date.toString(), style = MaterialTheme.typography.titleMedium)
+                        }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        // Timeline
-        LazyColumn {
-            items(times) { hour ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    // Time Label
-                    Text(
-                        text = formatHour(hour),
-                        modifier = Modifier.width(60.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+            // Timeline
+            LazyColumn {
+                items(times) { hour ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        // Time Label
+                        Text(
+                            text = formatHour(hour),
+                            modifier = Modifier.width(60.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
 
-                    // Task Box OR empty space
-                    if (tasks.containsKey(hour)) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 8.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                tasks[hour]!!,
-                                modifier = Modifier.padding(12.dp),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                        // Task Box OR empty space
+                        if (tasks.containsKey(hour)) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 8.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    tasks[hour]!!,
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(0.dp))
                         }
-                    } else {
-                        Spacer(modifier = Modifier.height(0.dp))
                     }
                 }
             }
         }
     }
 }
+
+
+
 
 @Composable
 fun formatHour(hour: Int): String {
@@ -158,4 +199,218 @@ fun formatHour(hour: Int): String {
         else -> "$hour AM"
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateTaskScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var title by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var date by rememberSaveable { mutableStateOf("") }
+    var startTime by rememberSaveable { mutableStateOf("") }
+    var endTime by rememberSaveable { mutableStateOf("") }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Create Task") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Task Title") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            DatePickerField(date = date, onDateSelected = { date = it })
+            Spacer(Modifier.height(12.dp))
+            TimePickerField(time = startTime, onTimeSelected = { startTime = it })
+            Spacer(Modifier.height(12.dp))
+            TimePickerField(time = endTime, onTimeSelected = { endTime = it })
+
+
+            /*OutlinedTextField(
+                value = date,
+                onValueChange = { date = it },
+                label = { Text("Date (e.g. 2025-01-08)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = startTime,
+                onValueChange = { startTime = it },
+                label = { Text("Start Time (e.g. 10:00)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = endTime,
+                onValueChange = { endTime = it },
+                label = { Text("End Time (e.g. 12:00)") },
+                modifier = Modifier.fillMaxWidth()
+            )*/
+
+            Spacer(Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    // TODO save to Firebase or local list
+                    onBack()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save Task")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TaskListTopBar() {
+    CenterAlignedTopAppBar(
+        title = { Text("Tasks") }
+    )
+}
+
+@Composable
+fun DatePickerField(
+    date: String,
+    onDateSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
+    // Wrapper Box to handle clicks
+    Box(modifier = modifier.clickable {
+        val datePicker = DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                onDateSelected("$year-${month + 1}-$dayOfMonth")
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        datePicker.show()
+    })
+
+    OutlinedTextField(
+        value = date,
+        onValueChange = {},
+        label = { Text("Date") },
+        //readOnly = true,
+        trailingIcon = {
+            Icon(Icons.Default.DateRange,
+                contentDescription = "Select date",
+                modifier = Modifier.clickable { // Icon is clickable too
+                    val datePicker = DatePickerDialog(
+                        context,
+                        { _, year, month, dayOfMonth ->
+                            onDateSelected("$year-${month + 1}-$dayOfMonth")
+                        },
+                        calendar.get(Calendar.YEAR),
+                        calendar.get(Calendar.MONTH),
+                        calendar.get(Calendar.DAY_OF_MONTH)
+                    )
+                    datePicker.show()
+                }
+            )
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                DatePickerDialog(
+                    context,
+                    { _, year, month, dayOfMonth ->
+                        onDateSelected("$year-${month + 1}-$dayOfMonth")
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                ).show()
+            }
+    )
+}
+
+@Composable
+fun TimePickerField(
+    time: String,
+    onTimeSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
+    OutlinedTextField(
+        value = time,
+        onValueChange = {},
+        label = { Text("Time") },
+        //readOnly = true,
+        trailingIcon = {
+            Icon( Icons.Default.Create,
+                contentDescription = "Select time",
+                modifier = Modifier.clickable {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
+                        },
+                        calendar.get(Calendar.HOUR_OF_DAY),
+                        calendar.get(Calendar.MINUTE),
+                        true
+                    ).show()
+                }
+            )
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                TimePickerDialog(
+                    context,
+                    { _, hourOfDay, minute ->
+                        onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
+                    },
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    calendar.get(Calendar.MINUTE),
+                    true
+                ).show()
+            }
+
+    )
+}
+
+
+
 

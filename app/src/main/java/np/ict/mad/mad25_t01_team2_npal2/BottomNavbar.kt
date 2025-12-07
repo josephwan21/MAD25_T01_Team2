@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
@@ -69,7 +70,12 @@ fun MAD25_T01_Team2_NPAL2App() {
                     onTaskClick = { currentDestination = AppDestinations.TASKS },
                     modifier = Modifier.padding(innerPadding)
                 )
-                AppDestinations.TASKS -> TaskListScreenContent(modifier = Modifier.padding(innerPadding))
+                AppDestinations.TASKS -> TaskListScreenContent(
+                    onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
+                    modifier = Modifier.padding(innerPadding))
+                AppDestinations.CREATE_TASKS -> CreateTaskScreen(
+                    onBack = { currentDestination = AppDestinations.TASKS}
+                )
                 //AppDestinations.SETTINGS -> ProfileScreen() Add later
             }
         }
@@ -82,6 +88,7 @@ enum class AppDestinations(
 ) {
     HOME("Home", Icons.Default.Home),
     TASKS("Tasks", Icons.Default.DateRange),
+    CREATE_TASKS("Create Task", Icons.Default.AddCircle),
     //SETTINGS("Settings", Icons.Default.Settings),
 }
 
