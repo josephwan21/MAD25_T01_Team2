@@ -10,7 +10,7 @@ This is a student assignment project for the Kotlin App Development module at Ng
 - Emily | S10227383E
 - Joseph | S10262528G
 - Monisha | S10220984G
-- Thomas | S10259398
+- Thomas | S10259398B
 
 ---
 
