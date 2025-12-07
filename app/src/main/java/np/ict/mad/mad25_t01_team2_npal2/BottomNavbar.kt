@@ -84,6 +84,10 @@ fun MAD25_T01_Team2_NPAL2App() {
                     userId = currentUserId
                 )
                 //AppDestinations.SETTINGS -> ProfileScreen() Add later
+                AppDestinations.CALENDAR -> {
+                    // Your student calendar screen is finally USED here 🎉
+                    StudentCalendarScreen()
+                }
             }
         }
     }
@@ -96,6 +100,9 @@ enum class AppDestinations(
     HOME("Home", Icons.Default.Home),
     TASKS("Tasks", Icons.Default.DateRange),
     CREATE_TASKS("Create Task", Icons.Default.AddCircle),
+    //SETTINGS("Settings", Icons.Default.Settings),
+
+    CALENDAR("Calendar", Icons.Default.DateRange),
     //SETTINGS("Settings", Icons.Default.Settings),
 }
 
