@@ -3,6 +3,7 @@ package np.ict.mad.mad25_t01_team2_npal2
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -42,12 +43,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.tasks.Task
+import com.google.api.Context
+import kotlinx.coroutines.launch
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
 import java.util.Calendar
 
@@ -203,13 +208,17 @@ fun formatHour(hour: Int): String {
 @Composable
 fun CreateTaskScreen(
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    firebaseHelper: FirebaseHelper,
+    userId: String
 ) {
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var date by rememberSaveable { mutableStateOf("") }
     var startTime by rememberSaveable { mutableStateOf("") }
     var endTime by rememberSaveable { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -285,7 +294,26 @@ fun CreateTaskScreen(
             Button(
                 onClick = {
                     // TODO save to Firebase or local list
-                    onBack()
+                    scope.launch {
+                        val task = Task(
+                            id = "",
+                            userId = userId,
+                            title = title,
+                            description = description,
+                            date = date,
+                            startTime = startTime,
+                            endTime = endTime
+                        )
+
+                        val success = firebaseHelper.saveTask(userId, task)
+                        if (success) {
+                            Toast.makeText(context, "Task saved!", Toast.LENGTH_SHORT).show()
+                            onBack()
+                        } else {
+                            Toast.makeText(context, "Failed to save task", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    //onBack()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -330,7 +358,7 @@ fun DatePickerField(
         value = date,
         onValueChange = {},
         label = { Text("Date") },
-        //readOnly = true,
+        readOnly = true,
         trailingIcon = {
             Icon(Icons.Default.DateRange,
                 contentDescription = "Select date",
@@ -377,7 +405,7 @@ fun TimePickerField(
         value = time,
         onValueChange = {},
         label = { Text("Time") },
-        //readOnly = true,
+        readOnly = true,
         trailingIcon = {
             Icon( Icons.Default.Create,
                 contentDescription = "Select time",
@@ -410,7 +438,4 @@ fun TimePickerField(
 
     )
 }
-
-
-
 
