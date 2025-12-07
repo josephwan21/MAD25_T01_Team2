@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import com.google.firebase.auth.FirebaseAuth
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
 
 /*class BottomNavbar : ComponentActivity() {
@@ -45,6 +46,10 @@ import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
 @Composable
 fun MAD25_T01_Team2_NPAL2App() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+    val firebaseHelper = FirebaseHelper()
+    //val currentUserId = "example_user_id" // or get it from FirebaseAuth.currentUser?.uid
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val currentUserId = currentUser?.uid ?: ""
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -74,7 +79,9 @@ fun MAD25_T01_Team2_NPAL2App() {
                     onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
                     modifier = Modifier.padding(innerPadding))
                 AppDestinations.CREATE_TASKS -> CreateTaskScreen(
-                    onBack = { currentDestination = AppDestinations.TASKS}
+                    onBack = { currentDestination = AppDestinations.TASKS},
+                    firebaseHelper = firebaseHelper,
+                    userId = currentUserId
                 )
                 //AppDestinations.SETTINGS -> ProfileScreen() Add later
             }

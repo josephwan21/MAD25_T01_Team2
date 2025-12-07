@@ -2,8 +2,20 @@ package np.ict.mad.mad25_t01_team2_npal2
 
 
 import android.util.Log
+import androidx.room.util.copy
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+
+data class Task(
+    val id: String = "",
+    val userId: String = "",
+    val title: String = "",
+    val description: String = "",
+    val date: String = "",
+    val startTime: String = "",
+    val endTime: String = ""
+)
 
 class FirebaseHelper{
 
@@ -35,9 +47,26 @@ class FirebaseHelper{
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             result.user!= null
         } catch (e:Exception){
-            Log.e("FirebaseHelper", "Login Failed!", e)
+            Log.e("FirebaseHelper", "Login Failed", e)
             false
         }
 
     }
+
+    suspend fun saveTask(userId: String, task: Task): Boolean {
+        return try {
+            val db = FirebaseFirestore.getInstance()
+            val newDoc = db.collection("TasksfromUser")
+                .document(userId)
+
+            val taskWithId = task.copy(id = newDoc.id)
+            newDoc.set(taskWithId).await()
+
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Save Task Failed", e)
+            false
+        }
+    }
+
 }
