@@ -259,9 +259,9 @@ fun CreateTaskScreen(
 
             DatePickerField(date = date, onDateSelected = { date = it })
             Spacer(Modifier.height(12.dp))
-            TimePickerField(time = startTime, onTimeSelected = { startTime = it })
+            StartTimePickerField(time = startTime, onTimeSelected = { startTime = it })
             Spacer(Modifier.height(12.dp))
-            TimePickerField(time = endTime, onTimeSelected = { endTime = it })
+            EndTimePickerField(time = endTime, onTimeSelected = { endTime = it })
 
 
             /*OutlinedTextField(
@@ -393,7 +393,7 @@ fun DatePickerField(
 }
 
 @Composable
-fun TimePickerField(
+fun StartTimePickerField(
     time: String,
     onTimeSelected: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -404,7 +404,53 @@ fun TimePickerField(
     OutlinedTextField(
         value = time,
         onValueChange = {},
-        label = { Text("Time") },
+        label = { Text("Start Time") },
+        readOnly = true,
+        trailingIcon = {
+            Icon( Icons.Default.Create,
+                contentDescription = "Select time",
+                modifier = Modifier.clickable {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
+                        },
+                        calendar.get(Calendar.HOUR_OF_DAY),
+                        calendar.get(Calendar.MINUTE),
+                        true
+                    ).show()
+                }
+            )
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                TimePickerDialog(
+                    context,
+                    { _, hourOfDay, minute ->
+                        onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
+                    },
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    calendar.get(Calendar.MINUTE),
+                    true
+                ).show()
+            }
+
+    )
+}
+@Composable
+fun EndTimePickerField(
+    time: String,
+    onTimeSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
+    OutlinedTextField(
+        value = time,
+        onValueChange = {},
+        label = { Text("End Time") },
         readOnly = true,
         trailingIcon = {
             Icon( Icons.Default.Create,
