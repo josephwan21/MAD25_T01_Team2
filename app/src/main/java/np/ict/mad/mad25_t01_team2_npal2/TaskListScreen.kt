@@ -3,6 +3,7 @@ package np.ict.mad.mad25_t01_team2_npal2
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,20 +44,28 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.tasks.Task
 import com.google.api.Context
 import kotlinx.coroutines.launch
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
+
+
 
 /*class TaskListScreen : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,13 +92,21 @@ fun TaskListScreenContent(modifier: Modifier = Modifier) {
     }
 }*/
 
+data class DayItem(
+    val dayName: String,
+    val dateNumber: Int,
+    val fullDate: String
+)
+
 @Composable
 fun TaskListScreenContent(
+    firebaseHelper: FirebaseHelper,
+    userId: String,
     onCreateTask: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
-    val monthYear = "November 2025"
+    /*val monthYear = "December 2025"
 
     val days = listOf(
         "Mon" to 17,
@@ -97,16 +116,27 @@ fun TaskListScreenContent(
         "Fri" to 21,
         "Sat" to 22,
         "Sun" to 23
-    )
+    )*/
 
     val times = (10..20).toList() // 10 AM to 8 PM
 
     // Dummy tasks mapped to specific times
-    val tasks = mapOf(
+    /*val tasks = mapOf(
         10 to "Complete Project Proposal",
         13 to "Review DDV Assignment",
         16 to "Consultation with Lecturer"
-    )
+    )*/
+    var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
+
+    //val tasksByHour = groupTasksByHour(tasks)
+
+    LaunchedEffect(true) {
+        tasks = firebaseHelper.getTasks(userId)
+    }
+
+    TaskListUI(tasks, onCreateTask)
+
+    /*
 
     Scaffold(
         floatingActionButton = {
@@ -189,16 +219,162 @@ fun TaskListScreenContent(
                     }
                 }
             }
+        }*/
+}
+
+@Composable
+fun TaskListUI(
+    tasks: List<Task>,
+    onCreateTask: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    val times = (0..23).toList()
+    //val tasksByHour = groupTasksByHour(tasks)
+
+    val calendar = Calendar.getInstance()
+    val monthYear = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calendar.time)
+
+    val days = remember { getNext7Days() }
+
+    var selectedDay by remember { mutableStateOf(days.first()) }
+
+    // Filter tasks for selected day
+    val tasksForDay = tasks.filter { task ->
+        task.date == selectedDay.fullDate
+    }
+
+
+
+    val tasksByHour = groupTasksByHour(tasksForDay)
+
+    Log.d("TaskListUI", "Selected day: ${selectedDay.fullDate}")
+    tasksForDay.forEach { Log.d("TaskListUI", "Task: ${it.title}, date=${it.date}") }
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = onCreateTask) {
+                Icon(Icons.Default.Add, contentDescription = "Create Task")
+            }
+        }
+    ) { innerPadding ->
+
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxSize()
+        ) {
+            Text(
+                text = monthYear,
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // ---------------------------
+            // Horizontal 7-day selector
+            // ---------------------------
+            LazyRow {
+                items(days) { day ->
+                    val isSelected = day.fullDate == selectedDay.fullDate
+
+                    Card(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .width(70.dp)
+                            .height(70.dp)
+                            .clickable { selectedDay = day},
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.White
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(day.dayName, style = MaterialTheme.typography.bodyMedium, color = if (isSelected) Color.White else Color.Black)
+                            Text(day.dateNumber.toString(), style = MaterialTheme.typography.titleMedium, color = if (isSelected) Color.White else Color.Black)
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f)
+
+            ) {
+                items(times) { hour ->
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+
+                        // left time label
+                        Text(
+                            formatHour(hour),
+                            modifier = Modifier.width(60.dp)
+                        )
+
+                        // right task OR empty
+                        val tasksAtThisHour = tasksByHour[hour]
+
+                        if (tasksAtThisHour != null) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(start = 8.dp)
+                            ) {
+                                tasksAtThisHour.forEach { task ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text(task.title, style = MaterialTheme.typography.titleMedium)
+                                                Text(task.description, style = MaterialTheme.typography.bodyMedium)
+                                            }
+                                            Text("${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                textAlign = TextAlign.End
+                                            )
+                                        }
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 
-
-
+fun formatTo12Hour(time24: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        val date = inputFormat.parse(time24)
+        outputFormat.format(date!!)
+    } catch (e: Exception) {
+        time24 // fallback if parsing fails
+    }
+}
 @Composable
 fun formatHour(hour: Int): String {
     return when {
+        hour == 0 -> "12 AM"
         hour == 12 -> "12 PM"
         hour > 12 -> "${hour - 12} PM"
         else -> "$hour AM"
@@ -293,33 +469,93 @@ fun CreateTaskScreen(
 
             Button(
                 onClick = {
-                    // TODO save to Firebase or local list
                     scope.launch {
-                        val task = Task(
-                            id = "",
-                            userId = userId,
-                            title = title,
-                            description = description,
-                            date = date,
-                            startTime = startTime,
-                            endTime = endTime
-                        )
 
-                        val success = firebaseHelper.saveTask(userId, task)
-                        if (success) {
-                            Toast.makeText(context, "Task saved!", Toast.LENGTH_SHORT).show()
-                            onBack()
-                        } else {
+                        if (title.isBlank() || description.isBlank() || date.isBlank() ||
+                            startTime.isBlank() || endTime.isBlank()
+                        ) {
+                            Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        try {
+                            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                            val start = timeFormat.parse(startTime)
+                            val end = timeFormat.parse(endTime)
+
+                            if (start!!.after(end)) {
+                                Toast.makeText(
+                                    context,
+                                    "End time must be later than start time",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@launch
+                            }
+
+                            val formattedDate = try {
+                                val inputFormat = SimpleDateFormat("yyyy-M-d", Locale.getDefault()) // whatever comes from DatePicker
+                                val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                val parsedDate = inputFormat.parse(date)
+                                outputFormat.format(parsedDate!!)
+                            } catch (e: Exception) {
+                                date // fallback if parsing fails
+                            }
+                            val task = Task(
+                                id = "",
+                                userId = userId,
+                                title = title,
+                                description = description,
+                                date = formattedDate,
+                                startTime = startTime,
+                                endTime = endTime
+                            )
+
+                            val success = firebaseHelper.saveTask(userId, task)
+                            if (success) {
+                                Toast.makeText(context, "Task saved!", Toast.LENGTH_SHORT).show()
+                                onBack()
+                            } else {
                             Toast.makeText(context, "Failed to save task", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
                         }
                     }
-                    //onBack()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Save Task")
             }
         }
+    }
+}
+
+
+fun getNext7Days(): List<DayItem> {
+    val calendar = Calendar.getInstance()
+    val days = mutableListOf<DayItem>()
+
+    val dayNames = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+
+    repeat(7) {
+        val dayName = dayNames[calendar.get(Calendar.DAY_OF_WEEK) - 1]
+        val dateNumber = calendar.get(Calendar.DAY_OF_MONTH)
+        val month = calendar.get(Calendar.MONTH) + 1
+        val year = calendar.get(Calendar.YEAR)
+
+        val fullDate = String.format("%04d-%02d-%02d", year, month, dateNumber)
+
+
+        days.add(DayItem(dayName, dateNumber, fullDate))
+
+        calendar.add(Calendar.DAY_OF_MONTH, 1)
+    }
+
+    return days
+}
+
+fun groupTasksByHour(tasks: List<Task>): Map<Int, List<Task>> {
+    return tasks.groupBy { task ->
+        task.startTime.take(2).toInt() // "13:00" → 13
     }
 }
 
