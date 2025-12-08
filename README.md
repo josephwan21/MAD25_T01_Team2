@@ -117,6 +117,7 @@ Allows students to customise app preferences, notification settings, and display
 - Settings & Personalization
 
 ### Monisha
+- Notifications and alerts
 
 ### Thomas
 
