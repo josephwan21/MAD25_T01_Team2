@@ -24,9 +24,7 @@ A Central Pulse, Within Reach
 
 ## 1. Introduction & Purpose
 The NPAL2 platform serves as a key digital interface for Ngee Ann Polytechnic students, providing access to academic resources, administrative services, and campus-related information. However, the existing NPAL2 mobile application and respective web platform are often fragmented and inconsistent, resulting in a disjointed user experience. 
-Students must navigate multiple systems to perform basic tasks such as checking timetables, managing assignments, accessing campus facilities, or viewing announcements. 
-
-Not to mention, the inconsistency in functionality, especially apparent when the database or the backend has unknown/unfound issues that greatly affect the user experience overall. Furthermore, the current application interface is outdated and lacks modern usability features expected by today’s mobile users.
+Students must navigate multiple systems to perform basic tasks such as checking timetables, managing assignments, accessing campus facilities, or viewing announcements. Furthermore, the current application interface is outdated and lacks modern usability features expected by today’s mobile users.
 
 ---
 
@@ -115,6 +113,7 @@ Allows students to customise app preferences, notification settings, and display
 ### Emily
 
 ### Joseph
+- Encrypted Login
 - Settings & Personalization
 
 ### Monisha
