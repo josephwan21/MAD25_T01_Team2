@@ -115,6 +115,7 @@ Allows students to customise app preferences, notification settings, and display
 ### Emily
 
 ### Joseph
+- Settings & Personalization
 
 ### Monisha
 
