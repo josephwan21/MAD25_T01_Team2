@@ -24,9 +24,7 @@ A Central Pulse, Within Reach
 
 ## 1. Introduction & Purpose
 The NPAL2 platform serves as a key digital interface for Ngee Ann Polytechnic students, providing access to academic resources, administrative services, and campus-related information. However, the existing NPAL2 mobile application and respective web platform are often fragmented and inconsistent, resulting in a disjointed user experience. 
-Students must navigate multiple systems to perform basic tasks such as checking timetables, managing assignments, accessing campus facilities, or viewing announcements. 
-
-Not to mention, the inconsistency in functionality, especially apparent when the database or the backend has unknown/unfound issues that greatly affect the user experience overall. Furthermore, the current application interface is outdated and lacks modern usability features expected by today’s mobile users.
+Students must navigate multiple systems to perform basic tasks such as checking timetables, managing assignments, accessing campus facilities, or viewing announcements. Furthermore, the current application interface is outdated and lacks modern usability features expected by today’s mobile users.
 
 ---
 
@@ -110,14 +108,26 @@ Allows students to customise app preferences, notification settings, and display
 
 ---
 
-## 6. LLM Usage Declaration
+## 6. Planned task(s) and feature(s) allocation for Stage 2.
+
+### Emily
+
+### Joseph
+- Encrypted Login
+- Settings & Personalization
+
+### Monisha
+
+### Thomas
+
+## 7. LLM Usage Declaration
 For the development phase of the assignment, our team plans to use a Large Language Model, specifically, ChatGPT (GPT-5 mini) in this case, to provide guidance, suggest coding or design approaches, and help structure technical documentation. 
 
 All outputs from the LLM will be reviewed, adapted, and verified by team members to ensure they accurately reflect our understanding and project direction. The LLM will serve strictly as a supportive tool, and all final coding, design, and implementation will be done by the team.
 
 ---
 
-## 7. Screenshots / UI Mockups
+## 8. Screenshots / UI Mockups
 ![Mockup](images/MockupLoginPage.jpg)
 ![Mockup](images/MockupHomePage.jpg)
 ![Mockup](images/MockupTaskManagement.jpg)
