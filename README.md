@@ -30,6 +30,28 @@ Students must navigate multiple systems to perform basic tasks such as checking 
 
 ## 2. Motivation & Objectives
 
+## Identified User Problems
+- User wants to access NPAL on mobile
+  - The existing NPAL app isn't available
+  - E.g. Common Test Information - Venue, Seat Number, etc.
+    
+- Navigation on-campus
+  - Student and lecturers often find navigation difficult and confusing on campus
+    
+- Students do not find a tangible reason for continuous, and consistent usage of the app due to:
+  - Heavily centralising the app's purpose to simply viewing timetables, scanning attendance or grades, resulting in low engagement in the app altogether.
+ 
+## Competitor Analysis
+
+- NP Go!
+  - Students consistently use the app for attendance taking purposes, centering its main purpose on the specific function.
+  - Simple UI provides students a conveninent, intuitive and efficient experience.
+    
+- Mobile Calendar Apps (Google Calendar, Apple Calendar)
+  - Used by students for general task tracking.
+  - Lacks integration with school-specific events, maps, and task notifications.
+  - Cannot sync automatically with school timetables or course data.
+  
 ### Motivation
 - The exisiting NPAL2 mobile application and the NPAL website are **inconsistent**.
 - The User Interface is **outdated**.
