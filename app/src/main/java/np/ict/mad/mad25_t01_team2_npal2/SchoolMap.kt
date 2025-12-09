@@ -40,7 +40,7 @@ fun SchoolMap() {
     var offset by remember { mutableStateOf(Offset.Zero) }
     var selectedRegion by remember { mutableStateOf<TappableRegion?>(null) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
-    val painter = painterResource(id = R.drawable.campus_map_1_png)
+    val painter = painterResource(id = R.drawable.campus_map_1)
 
     if (selectedRegion != null) {
         AlertDialog(
