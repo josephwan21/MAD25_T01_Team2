@@ -50,7 +50,6 @@ Students must navigate multiple systems to perform basic tasks such as checking 
 - Mobile Calendar Apps (Google Calendar, Apple Calendar)
   - Used by students for general task tracking.
   - Lacks integration with school-specific events, maps, and task notifications.
-  - Cannot sync automatically with school timetables or course data.
   
 ### Motivation
 - The exisiting NPAL2 mobile application and the NPAL website are **inconsistent**.
