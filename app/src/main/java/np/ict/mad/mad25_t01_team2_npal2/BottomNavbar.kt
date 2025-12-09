@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -91,6 +92,7 @@ fun MAD25_T01_Team2_NPAL2App() {
                     // Your student calendar screen is finally USED here 🎉
                     StudentCalendarScreen()
                 }
+                AppDestinations.MAP -> SchoolMap()
             }
         }
     }
@@ -106,6 +108,7 @@ enum class AppDestinations(
     //SETTINGS("Settings", Icons.Default.Settings),
 
     CALENDAR("Calendar", Icons.Default.DateRange),
+    MAP("School Map", Icons.Default.Place)
     //SETTINGS("Settings", Icons.Default.Settings),
 }
 
