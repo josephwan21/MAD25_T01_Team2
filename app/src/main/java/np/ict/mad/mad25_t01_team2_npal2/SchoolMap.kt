@@ -28,7 +28,8 @@ data class TappableRegion(val name: String, val rect: Rect)
 
 
 private val tappableRegions = listOf(
-    TappableRegion("Main Entrance", Rect(980f, 1666f, 1110f, 1777f))
+    TappableRegion("Main Entrance", Rect(980f, 1666f, 1110f, 1777f)),
+    TappableRegion("Convention Centre", Rect(820f, 1080f, 930f, 1200f))
 )
 
 @Composable
