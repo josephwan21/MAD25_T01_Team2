@@ -1,6 +1,7 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +29,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Calendar
+
+data class CalendarTask( //
+    val title: String,
+    val time: String,
+    val category: TaskCategory
+)
+
+enum class TaskCategory(val label: String) { //used enum class for fixed choices
+    CLASS("Class"),
+    EXAM("Exam"),
+    CCA("CCA"),
+    PERSONAL("Personal")
+}
 
 @Composable
 fun StudentCalendarScreen() {
@@ -60,11 +74,67 @@ fun StudentCalendarScreen() {
 
     val monthLabel = "${monthNames[monthIndex]}, $year"
 
-    // Dummy tasks for current day to test
-    val tasksMap = mapOf(
+    // Dummy tasks on multiple dates in this month
+    val tasksMap: Map<Triple<Int, Int, Int>, List<CalendarTask>> = mapOf(
+        // Today
         Triple(todayYear, todayMonth, todayDay) to listOf(
-            "Mobile App Dev – 9:00–11:00 AM",
-            "CCA Practice – 6:00–8:00 PM"
+            CalendarTask(
+                title = "Mobile App Development Lecture",
+                time = "9:00 – 11:00 AM",
+                category = TaskCategory.CLASS
+            ),
+            CalendarTask(
+                title = "Database Theory Self-Study",
+                time = "2:00 – 3:30 PM",
+                category = TaskCategory.PERSONAL
+            ),
+            CalendarTask(
+                title ="MAD Stage 1 Presentation",
+                time = "3:00 – 5:30 PM",
+                category = TaskCategory.EXAM
+            ),
+            CalendarTask(
+                title = "DSA Self-Study",
+                time = "6:00 – 7:30 PM",
+                category = TaskCategory.PERSONAL
+            )
+
+
+        ),
+
+        Triple(todayYear, todayMonth, 5) to listOf(
+            CalendarTask(
+                title = "MAD Lab Session",
+                time = "1:00 – 3:00 PM",
+                category = TaskCategory.CLASS
+            ),
+            CalendarTask(
+                title = "CCA Committee Meeting",
+                time = "5:00 – 6:00 PM",
+                category = TaskCategory.CCA
+            )
+        ),
+
+        Triple(todayYear, todayMonth, 10) to listOf(
+            CalendarTask(
+                title = "Database Quiz 1",
+                time = "10:00 – 11:00 AM",
+                category = TaskCategory.EXAM
+            )
+        ),
+
+        // 20th of this month
+        Triple(todayYear, todayMonth, 20) to listOf(
+            CalendarTask(
+                title = "Project Group Discussion",
+                time = "3:00 – 4:30 PM",
+                category = TaskCategory.PERSONAL
+            ),
+            CalendarTask(
+                title = "CCA Friendly Match",
+                time = "7:00 – 9:00 PM",
+                category = TaskCategory.CCA
+            )
         )
     )
 
@@ -136,7 +206,7 @@ fun StudentCalendarScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ----- Weekday header -----
+        // Weekday header
         val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         Row(modifier = Modifier.fillMaxWidth()) {
             weekDays.forEach { label ->
@@ -243,18 +313,43 @@ fun StudentCalendarScreen() {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(tasksForSelectedDay) { task ->
+                    val borderColor = when (task.category) {
+                        TaskCategory.CLASS -> MaterialTheme.colorScheme.primary
+                        TaskCategory.EXAM -> MaterialTheme.colorScheme.error
+                        TaskCategory.CCA -> MaterialTheme.colorScheme.tertiary
+                        TaskCategory.PERSONAL -> MaterialTheme.colorScheme.secondary
+                    }
+
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                width = 2.dp,
+                                color = borderColor,
+                                shape = RoundedCornerShape(12.dp)
+                            ),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
                         )
                     ) {
-                        Text(
-                            text = task,
-                            modifier = Modifier.padding(12.dp),
-                            fontSize = 14.sp
-                        )
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = task.title,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = task.time,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                text = task.category.label,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = borderColor
+                            )
+                        }
                     }
                 }
             }
@@ -262,12 +357,11 @@ fun StudentCalendarScreen() {
     }
 }
 
-
 private fun hasEventsOnDay(
     year: Int,
     month: Int,
     day: Int,
-    tasks: Map<Triple<Int, Int, Int>, List<String>>
+    tasks: Map<Triple<Int, Int, Int>, List<CalendarTask>>
 ): Boolean {
     return tasks[Triple(year, month, day)]?.isNotEmpty() == true
 }
