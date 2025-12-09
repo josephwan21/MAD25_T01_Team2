@@ -25,13 +25,9 @@ import androidx.compose.ui.unit.IntSize
 // Data class to hold information about a tappable area on the map
 data class TappableRegion(val name: String, val rect: Rect)
 
-// A sample list of tappable regions.
-// You need to replace these with the actual coordinates from your map image.
-// You can use an image editor (like Paint or GIMP) to find the pixel coordinates (left, top) and dimensions (width, height) of your regions.
+
 private val tappableRegions = listOf(
-    // Example: TappableRegion("Block A", Rect(left=100f, top=200f, right=300f, bottom=400f))
     TappableRegion("Main Building", Rect(150f, 250f, 450f, 550f))
-    // Add more regions here
 )
 
 @Composable
@@ -63,7 +59,7 @@ fun SchoolMap() {
                 detectTransformGestures { _, pan, zoom, _ ->
                     scale = (scale * zoom).coerceIn(1f, 3f) // Clamp zoom level
                     offset += pan
-                    // TODO: You could add logic here to prevent panning the image off-screen
+
                 }
             }
             .pointerInput(Unit) {
