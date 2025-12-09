@@ -104,9 +104,7 @@ enum class AppDestinations(
 ) {
     HOME("Home", Icons.Default.Home),
     TASKS("Tasks", Icons.Default.DateRange),
-    CREATE_TASKS("Create Task", Icons.Default.AddCircle),
-    //SETTINGS("Settings", Icons.Default.Settings),
-
+    CREATE_TASKS("Add Task", Icons.Default.AddCircle),
     CALENDAR("Calendar", Icons.Default.DateRange),
     MAP("School Map", Icons.Default.Place)
     //SETTINGS("Settings", Icons.Default.Settings),
