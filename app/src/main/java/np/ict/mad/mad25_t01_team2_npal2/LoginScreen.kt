@@ -12,6 +12,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,10 +22,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,7 +45,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -87,84 +100,105 @@ fun LoginScreen(
     val biometricAvailable = remember { activity?.let { isBiometricAvailable(it) } ?: false }
 
     Box(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        contentAlignment = Alignment.Center
+        modifier = modifier.fillMaxSize()
     ){
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ){
-            Text(
-                text = "Login Page",
-                style = MaterialTheme.typography.headlineSmall
+        Image(
+            painter = painterResource(id = R.drawable.login_image),
+            contentDescription = "School Image",
+            alignment = Alignment.TopCenter,
+            modifier = Modifier
+                .fillMaxSize()
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
             )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+
+            ) {
+                Text(
+                    text = "Welcome to NPAL2",
+                    style = MaterialTheme.typography.headlineSmall
+                )
 
 
-            Spacer(modifier = Modifier.padding(12.dp))
-            OutlinedTextField(
-                value = username,
-                onValueChange = {username = it},
-                label = { Text(text = "Username")},
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username") }
-            )
-            Spacer(modifier = Modifier.padding(12.dp))
-            OutlinedTextField(
-                value = password,
-                onValueChange = {password = it},
-                label = { Text(text = "Password")},
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") }
-            )
-            Spacer(modifier = Modifier.padding(12.dp))
-            Button(
-                onClick = {
-                    scope.launch {
-                        val isValid = validateLogin(context, username, password)
-                        if(isValid){
-                            onLoginSuccess()
-                            /*showBiometricPrompt(activity = activity,
-                                onSuccess = { onLoginSuccess() },
-                                onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
-                            )*/
-                            /*if (activity != null) {
-                                showBiometricPrompt(
-                                    activity = activity,
+                Spacer(modifier = Modifier.padding(12.dp))
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = {username = it},
+                    label = { Text(text = "Username")},
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username") }
+                )
+                Spacer(modifier = Modifier.padding(12.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {password = it},
+                    label = { Text(text = "Password")},
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") }
+                )
+                Spacer(modifier = Modifier.padding(12.dp))
+                Button(
+                    onClick = {
+                        scope.launch {
+                            val isValid = validateLogin(context, username, password)
+                            if(isValid){
+                                onLoginSuccess()
+                                /*showBiometricPrompt(activity = activity,
                                     onSuccess = { onLoginSuccess() },
                                     onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
-                                )
-                            } else {
-                                Toast.makeText(context, "Unable to access activity for biometric", Toast.LENGTH_SHORT).show()
-                            }*/
-                        }else{
-                            Toast.makeText(context,"Invalid credentials", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            ){
-                Text(text = "Login")
-            }
-            Spacer(modifier = Modifier.padding(16.dp))
-            Button(
-                onClick = {
-                    if(username.isNotEmpty() && password.isNotEmpty()){
-                        scope.launch {
-                            val isCreated = performSignUp(context, username, password)
-                            if(isCreated){
-                                Toast.makeText(context, "User has been successfully created", Toast.LENGTH_LONG).show()
+                                )*/
+                                /*if (activity != null) {
+                                    showBiometricPrompt(
+                                        activity = activity,
+                                        onSuccess = { onLoginSuccess() },
+                                        onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+                                    )
+                                } else {
+                                    Toast.makeText(context, "Unable to access activity for biometric", Toast.LENGTH_SHORT).show()
+                                }*/
                             }else{
-                                Toast.makeText(context, "Failed to create user", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context,"Invalid credentials", Toast.LENGTH_SHORT).show()
                             }
                         }
-                    }else{
-                        Toast.makeText(context, "Please provide more details.", Toast.LENGTH_SHORT).show()
                     }
+                ){
+                    Text(text = "Login")
                 }
-            )
-            {
-                Text(text = "Sign Up")
+                Spacer(modifier = Modifier.padding(8.dp))
+
+                Text(text = "New Student?")
+                Button(
+                    onClick = {
+                        if(username.isNotEmpty() && password.isNotEmpty()){
+                            scope.launch {
+                                val isCreated = performSignUp(context, username, password)
+                                if(isCreated){
+                                    Toast.makeText(context, "User has been successfully created", Toast.LENGTH_LONG).show()
+                                }else{
+                                    Toast.makeText(context, "Failed to create user", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }else{
+                            Toast.makeText(context, "Please provide more details.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+                {
+                    Text(text = "Register")
+                }
             }
         }
-
     }
-
 }
 
 suspend fun performSignUp(context: Context, username: String, password: String): Boolean{

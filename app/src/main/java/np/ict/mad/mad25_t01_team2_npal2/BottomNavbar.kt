@@ -77,7 +77,10 @@ fun MAD25_T01_Team2_NPAL2App() {
                 )
                 AppDestinations.TASKS -> TaskListScreenContent(
                     onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
+                    firebaseHelper = firebaseHelper,
+                    userId = currentUserId,
                     modifier = Modifier.padding(innerPadding))
+
                 AppDestinations.CREATE_TASKS -> CreateTaskScreen(
                     onBack = { currentDestination = AppDestinations.TASKS},
                     firebaseHelper = firebaseHelper,
