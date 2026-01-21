@@ -89,8 +89,10 @@ fun MAD25_T01_Team2_NPAL2App() {
                 )
                 //AppDestinations.SETTINGS -> ProfileScreen() Add later
                 AppDestinations.CALENDAR -> {
-                    // Your student calendar screen is finally USED here 🎉
-                    StudentCalendarScreen()
+                    StudentCalendarScreen(
+                        firebaseHelper = firebaseHelper,
+                        userId = currentUserId
+                    )
                 }
                 AppDestinations.MAP -> SchoolMap()
             }
