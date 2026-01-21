@@ -56,8 +56,10 @@ class FirebaseHelper{
     suspend fun saveTask(userId: String, task: Task): Boolean {
         return try {
             val db = FirebaseFirestore.getInstance()
-            val newDoc = db.collection("TasksfromUser")
+            val newDoc = db.collection("users")
                 .document(userId)
+                .collection("TasksfromUser")
+                .document()
 
             val taskWithId = task.copy(id = newDoc.id)
             newDoc.set(taskWithId).await()
@@ -68,5 +70,22 @@ class FirebaseHelper{
             false
         }
     }
+
+    suspend fun getTasks(userId: String): List<Task> {
+        return try {
+            val db = FirebaseFirestore.getInstance()
+            val snapshot = db.collection("users")
+                .document(userId)
+                .collection("TasksfromUser")
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { it.toObject(Task::class.java) }
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Fetching tasks failed", e)
+            emptyList()
+        }
+    }
+
 
 }

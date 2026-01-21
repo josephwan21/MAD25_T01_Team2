@@ -24,14 +24,33 @@ A Central Pulse, Within Reach
 
 ## 1. Introduction & Purpose
 The NPAL2 platform serves as a key digital interface for Ngee Ann Polytechnic students, providing access to academic resources, administrative services, and campus-related information. However, the existing NPAL2 mobile application and respective web platform are often fragmented and inconsistent, resulting in a disjointed user experience. 
-Students must navigate multiple systems to perform basic tasks such as checking timetables, managing assignments, accessing campus facilities, or viewing announcements. 
-
-Not to mention, the inconsistency in functionality, especially apparent when the database or the backend has unknown/unfound issues that greatly affect the user experience overall. Furthermore, the current application interface is outdated and lacks modern usability features expected by today’s mobile users.
+Students must navigate multiple systems to perform basic tasks such as checking timetables, managing assignments, accessing campus facilities, or viewing announcements. Furthermore, the current application interface is outdated and lacks modern usability features expected by today’s mobile users.
 
 ---
 
 ## 2. Motivation & Objectives
 
+## Identified User Problems
+- User wants to access NPAL on mobile
+  - The existing NPAL app isn't available
+  - E.g. Common Test Information - Venue, Seat Number, etc.
+    
+- Navigation on-campus
+  - Student and lecturers often find navigation difficult and confusing on campus
+    
+- Students do not find a tangible reason for continuous, and consistent usage of the app due to:
+  - Heavily centralising the app's purpose to simply viewing timetables, scanning attendance or grades, resulting in low engagement in the app altogether.
+ 
+## Competitor Analysis
+
+- NP Go!
+  - Students consistently use the app for attendance taking purposes, centering its main purpose on the specific function.
+  - Simple UI provides students a conveninent, intuitive and efficient experience.
+    
+- Mobile Calendar Apps (Google Calendar, Apple Calendar)
+  - Used by students for general task tracking.
+  - Lacks integration with school-specific events, maps, and task notifications.
+  
 ### Motivation
 - The exisiting NPAL2 mobile application and the NPAL website are **inconsistent**.
 - The User Interface is **outdated**.
@@ -110,14 +129,27 @@ Allows students to customise app preferences, notification settings, and display
 
 ---
 
-## 6. LLM Usage Declaration
+## 6. Planned task(s) and feature(s) allocation for Stage 2.
+
+### Emily
+
+### Joseph
+- Encrypted Login
+- Settings & Personalization
+
+### Monisha
+- Notifications and alerts
+
+### Thomas
+- Personalised Navigation for the School Map
+## 7. LLM Usage Declaration
 For the development phase of the assignment, our team plans to use a Large Language Model, specifically, ChatGPT (GPT-5 mini) in this case, to provide guidance, suggest coding or design approaches, and help structure technical documentation. 
 
 All outputs from the LLM will be reviewed, adapted, and verified by team members to ensure they accurately reflect our understanding and project direction. The LLM will serve strictly as a supportive tool, and all final coding, design, and implementation will be done by the team.
 
 ---
 
-## 7. Screenshots / UI Mockups
+## 8. Screenshots / UI Mockups
 ![Mockup](images/MockupLoginPage.jpg)
 ![Mockup](images/MockupHomePage.jpg)
 ![Mockup](images/MockupTaskManagement.jpg)

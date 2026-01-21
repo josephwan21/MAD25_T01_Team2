@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -77,7 +78,10 @@ fun MAD25_T01_Team2_NPAL2App() {
                 )
                 AppDestinations.TASKS -> TaskListScreenContent(
                     onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
+                    firebaseHelper = firebaseHelper,
+                    userId = currentUserId,
                     modifier = Modifier.padding(innerPadding))
+
                 AppDestinations.CREATE_TASKS -> CreateTaskScreen(
                     onBack = { currentDestination = AppDestinations.TASKS},
                     firebaseHelper = firebaseHelper,
@@ -88,6 +92,7 @@ fun MAD25_T01_Team2_NPAL2App() {
                     // Your student calendar screen is finally USED here 🎉
                     StudentCalendarScreen()
                 }
+                AppDestinations.MAP -> SchoolMap()
             }
         }
     }
@@ -99,10 +104,9 @@ enum class AppDestinations(
 ) {
     HOME("Home", Icons.Default.Home),
     TASKS("Tasks", Icons.Default.DateRange),
-    CREATE_TASKS("Create Task", Icons.Default.AddCircle),
-    //SETTINGS("Settings", Icons.Default.Settings),
-
+    CREATE_TASKS("Add Task", Icons.Default.AddCircle),
     CALENDAR("Calendar", Icons.Default.DateRange),
+    MAP("School Map", Icons.Default.Place)
     //SETTINGS("Settings", Icons.Default.Settings),
 }
 
