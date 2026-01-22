@@ -32,12 +32,6 @@ data class CalendarTask( //
     val category: TaskCategory
 )
 
-enum class TaskCategory(val label: String) { //used enum class for fixed choices
-    CLASS("Class"),
-    EXAM("Exam"),
-    CCA("CCA"),
-    PERSONAL("Personal")
-}
 
 @Composable
 fun StudentCalendarScreen(
@@ -327,12 +321,16 @@ private fun parseYMD(date: String): Triple<Int, Int, Int>? {
 }
 
 private fun Task.toCalendarTask(): CalendarTask {
+    val cat = runCatching { TaskCategory.valueOf(category) }
+        .getOrElse { TaskCategory.PERSONAL }
+
     return CalendarTask(
         title = title,
         time = "${formatTo12Hour(startTime)} – ${formatTo12Hour(endTime)}",
-        category = TaskCategory.PERSONAL
+        category = cat
     )
 }
+
 
 private fun hasEventsOnDay(
     year: Int,

@@ -7,6 +7,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +37,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -239,6 +243,7 @@ fun TaskListUI(
 
     var selectedDay by remember { mutableStateOf(days.first()) }
 
+
     // Filter tasks for selected day
     val tasksForDay = tasks.filter { task ->
         task.date == selectedDay.fullDate
@@ -328,10 +333,23 @@ fun TaskListUI(
                                 modifier = Modifier.fillMaxWidth().padding(start = 8.dp)
                             ) {
                                 tasksAtThisHour.forEach { task ->
+                                    val cat = categoryFromString(task.category)
+
+                                    val borderColor = when (cat) {
+                                        TaskCategory.CLASS -> MaterialTheme.colorScheme.primary
+                                        TaskCategory.EXAM -> MaterialTheme.colorScheme.error
+                                        TaskCategory.CCA -> MaterialTheme.colorScheme.tertiary
+                                        TaskCategory.PERSONAL -> MaterialTheme.colorScheme.secondary
+                                    }
+
                                     Card(
-                                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 8.dp)
+                                            .border(2.dp, borderColor, RoundedCornerShape(12.dp)),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
+
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -393,6 +411,7 @@ fun CreateTaskScreen(
     var date by rememberSaveable { mutableStateOf("") }
     var startTime by rememberSaveable { mutableStateOf("") }
     var endTime by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf(TaskCategory.PERSONAL) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -432,7 +451,18 @@ fun CreateTaskScreen(
             )
 
             Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Category",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(10.dp))
 
+            CategoryPicker(
+                selected = selectedCategory,
+                onSelect = { selectedCategory = it }
+            )
+            Spacer(Modifier.height(12.dp))
             DatePickerField(date = date, onDateSelected = { date = it })
             Spacer(Modifier.height(12.dp))
             StartTimePickerField(time = startTime, onTimeSelected = { startTime = it })
@@ -506,7 +536,9 @@ fun CreateTaskScreen(
                                 description = description,
                                 date = formattedDate,
                                 startTime = startTime,
-                                endTime = endTime
+                                endTime = endTime,
+                                category = selectedCategory.name
+
                             )
 
                             val success = firebaseHelper.saveTask(userId, task)
@@ -524,6 +556,53 @@ fun CreateTaskScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Save Task")
+            }
+        }
+    }
+}
+
+@Composable
+fun CategoryPicker(
+    selected: TaskCategory,
+    onSelect: (TaskCategory) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        TaskCategory.values().forEach { cat ->
+            val isSelected = cat == selected
+
+            val bgColor = if (isSelected)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.surface
+
+            val textColor = if (isSelected)
+                MaterialTheme.colorScheme.onPrimary
+            else
+                MaterialTheme.colorScheme.onSurface
+
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onSelect(cat) },
+                shape = RoundedCornerShape(50),
+                colors = CardDefaults.cardColors(containerColor = bgColor),
+                border = if (!isSelected)
+                    BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                else null
+            ) {
+                Text(
+                    text = cat.label,
+                    modifier = Modifier
+                        .padding(vertical = 10.dp)
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    color = textColor,
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
         }
     }
@@ -720,4 +799,10 @@ fun EndTimePickerField(
 
     )
 }
+fun categoryFromString(value: String): TaskCategory {
+    return runCatching { TaskCategory.valueOf(value) }
+        .getOrElse { TaskCategory.PERSONAL }
+}
+
+
 
