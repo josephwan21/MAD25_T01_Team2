@@ -24,13 +24,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-
+import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -107,6 +110,7 @@ fun TaskListScreenContent(
     firebaseHelper: FirebaseHelper,
     userId: String,
     onCreateTask: () -> Unit,
+    onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -134,11 +138,22 @@ fun TaskListScreenContent(
 
     //val tasksByHour = groupTasksByHour(tasks)
 
-    LaunchedEffect(true) {
+    LaunchedEffect(userId) {
         tasks = firebaseHelper.getTasks(userId)
+
+        val today = todayYMD()
+        tasks.filter { it.date == today }.forEach { task ->
+            NotificationCenter.pushOnce(
+                key = "today-${task.id}", // prevents duplicates
+                userId = userId,
+                title = "Task Due Today",
+                message = "${task.title} (${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)})"
+            )
+        }
     }
 
-    TaskListUI(tasks, onCreateTask)
+    TaskListUI(tasks, onCreateTask, userId, onOpenNotifications)
+
 
     /*
 
@@ -226,10 +241,13 @@ fun TaskListScreenContent(
         }*/
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListUI(
     tasks: List<Task>,
     onCreateTask: () -> Unit,
+    userId: String,
+    onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -257,6 +275,31 @@ fun TaskListUI(
     tasksForDay.forEach { Log.d("TaskListUI", "Task: ${it.title}, date=${it.date}") }
 
     Scaffold(
+        topBar = {
+            val allNotifs by NotificationCenter.notifications.collectAsState()
+            val unread = allNotifs.count { it.userId == userId && !it.isRead }
+
+            TopAppBar(
+                title = { Text("Tasks") },
+                actions = {
+                    IconButton(onClick = onOpenNotifications) {
+                        BadgedBox(
+                            badge = {
+                                if (unread > 0) {
+                                    Badge { Text(unread.toString()) }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications"
+                            )
+                        }
+                    }
+
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onCreateTask) {
                 Icon(Icons.Default.Add, contentDescription = "Create Task")
