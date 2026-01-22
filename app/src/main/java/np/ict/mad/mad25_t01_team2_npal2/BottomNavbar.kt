@@ -10,9 +10,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.DateRange
+import java.util.Calendar
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -20,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -30,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import com.google.firebase.auth.FirebaseAuth
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
+import java.text.SimpleDateFormat
 
 /*class BottomNavbar : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +55,8 @@ fun MAD25_T01_Team2_NPAL2App() {
     //val currentUserId = "example_user_id" // or get it from FirebaseAuth.currentUser?.uid
     val currentUser = FirebaseAuth.getInstance().currentUser
     val currentUserId = currentUser?.uid ?: ""
+    var showNotifications by rememberSaveable { mutableStateOf(false) }
+
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -64,12 +70,23 @@ fun MAD25_T01_Team2_NPAL2App() {
                     },
                     label = { Text(it.label) },
                     selected = it == currentDestination,
-                    onClick = { currentDestination = it }
+                    onClick = {
+                        showNotifications = false // close notif screen if open
+                        currentDestination = it
+                    }
                 )
             }
         }
     ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->             // If user opened notifications (via bell), show it FULL SCREEN
+            if (showNotifications) {
+                NotificationsScreen(
+                    userId = currentUserId,
+                    onBack = { showNotifications = false },
+                    modifier = Modifier.padding(innerPadding)
+                )
+                return@Scaffold
+            }
             val contentModifier = Modifier.padding(innerPadding)
             when (currentDestination) {
                 AppDestinations.HOME -> HomeScreenContent(
@@ -77,11 +94,12 @@ fun MAD25_T01_Team2_NPAL2App() {
                     modifier = Modifier.padding(innerPadding)
                 )
                 AppDestinations.TASKS -> TaskListScreenContent(
-                    onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
                     firebaseHelper = firebaseHelper,
                     userId = currentUserId,
-                    modifier = Modifier.padding(innerPadding))
-
+                    onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
+                    onOpenNotifications = { showNotifications = true },
+                    modifier = Modifier.padding(innerPadding)
+                )
                 AppDestinations.CREATE_TASKS -> CreateTaskScreen(
                     onBack = { currentDestination = AppDestinations.TASKS},
                     firebaseHelper = firebaseHelper,
@@ -95,6 +113,9 @@ fun MAD25_T01_Team2_NPAL2App() {
                     )
                 }
                 AppDestinations.MAP -> SchoolMap()
+
+
+
             }
         }
     }
@@ -108,9 +129,13 @@ enum class AppDestinations(
     TASKS("Tasks", Icons.Default.DateRange),
     CREATE_TASKS("Add Task", Icons.Default.AddCircle),
     CALENDAR("Calendar", Icons.Default.DateRange),
-    MAP("School Map", Icons.Default.Place)
-    //SETTINGS("Settings", Icons.Default.Settings),
+    MAP("School Map", Icons.Default.Place),
+
+
 }
+
+
+
 
 /*@Composable
 fun Greeting2(name: String, modifier: Modifier = Modifier) {
@@ -127,3 +152,4 @@ fun GreetingPreview2() {
         Greeting2("Android")
     }
 }*/
+
