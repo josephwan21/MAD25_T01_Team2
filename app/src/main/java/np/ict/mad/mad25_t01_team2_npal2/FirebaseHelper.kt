@@ -88,5 +88,38 @@ class FirebaseHelper{
         }
     }
 
+    suspend fun deleteTask(userId: String, taskId: String): Boolean {
+        return try {
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .collection("TasksfromUser")
+                .document(taskId)
+                .delete()
+                .await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Delete Task Failed", e)
+            false
+        }
+    }
+    suspend fun updateTask(userId: String, task: Task): Boolean {
+        return try {
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .collection("TasksfromUser")
+                .document(task.id)
+                .set(task)
+                .await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Update Task Failed", e)
+            false
+        }
+    }
+
+
+
 
 }
