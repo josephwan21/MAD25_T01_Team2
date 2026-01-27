@@ -31,14 +31,18 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -46,6 +50,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -135,6 +140,9 @@ fun TaskListScreenContent(
         16 to "Consultation with Lecturer"
     )*/
     var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
+    val scope = rememberCoroutineScope()
+
+    var editingTask by remember { mutableStateOf<Task?>(null) }
 
     //val tasksByHour = groupTasksByHour(tasks)
 
@@ -152,7 +160,38 @@ fun TaskListScreenContent(
         }
     }
 
-    TaskListUI(tasks, onCreateTask, userId, onOpenNotifications)
+    if (editingTask != null) {
+        EditTaskScreen(
+            task = editingTask!!,
+            userId = userId,
+            firebaseHelper = firebaseHelper,
+            onBack = {
+                editingTask = null
+            },
+            onTaskUpdated = {
+                scope.launch {
+                    tasks = firebaseHelper.getTasks(userId)
+                    editingTask = null
+                }
+            }
+        )
+    } else {
+        TaskListUI(
+            tasks = tasks,
+            userId = userId,
+            onCreateTask = onCreateTask,
+            onOpenNotifications = onOpenNotifications,
+            onDeleteTask = { task ->
+                scope.launch {
+                    firebaseHelper.deleteTask(userId, task.id)
+                    tasks = firebaseHelper.getTasks(userId)
+                }
+            },
+            onEditTask = { task ->
+                editingTask = task
+            }
+        )
+    }
 
 
     /*
@@ -246,6 +285,8 @@ fun TaskListScreenContent(
 fun TaskListUI(
     tasks: List<Task>,
     onCreateTask: () -> Unit,
+    onDeleteTask: (Task) -> Unit,
+    onEditTask: (Task) -> Unit,
     userId: String,
     onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier
@@ -376,6 +417,7 @@ fun TaskListUI(
                                 modifier = Modifier.fillMaxWidth().padding(start = 8.dp)
                             ) {
                                 tasksAtThisHour.forEach { task ->
+                                    var menuExpanded by remember { mutableStateOf(false) }
                                     val cat = categoryFromString(task.category)
 
                                     val borderColor = when (cat) {
@@ -404,12 +446,47 @@ fun TaskListUI(
                                                 Text(task.title, style = MaterialTheme.typography.titleMedium)
                                                 Text(task.description, style = MaterialTheme.typography.bodyMedium)
                                             }
-                                            Text("${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                textAlign = TextAlign.End
-                                            )
-                                        }
 
+                                            // RIGHT: time + ellipsis
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    "${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    textAlign = TextAlign.End
+                                                )
+
+                                                Box {
+                                                    IconButton(onClick = { menuExpanded = true }) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.MoreVert,
+                                                            contentDescription = "Task options"
+                                                        )
+                                                    }
+
+                                                    DropdownMenu(
+                                                        expanded = menuExpanded,
+                                                        onDismissRequest = { menuExpanded = false }
+                                                    ) {
+                                                        DropdownMenuItem(
+                                                            text = { Text("Edit") },
+                                                            onClick = {
+                                                                menuExpanded = false
+                                                                onEditTask(task)
+                                                            }
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = { Text("Delete") },
+                                                            onClick = {
+                                                                menuExpanded = false
+                                                                onDeleteTask(task)
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -599,6 +676,208 @@ fun CreateTaskScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Save Task")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditTaskScreen(
+    task: Task,
+    onBack: () -> Unit,
+    onTaskUpdated: () -> Unit,
+    firebaseHelper: FirebaseHelper,
+    userId: String
+) {
+    var title by rememberSaveable { mutableStateOf(task.title) }
+    var description by rememberSaveable { mutableStateOf(task.description) }
+    var date by rememberSaveable { mutableStateOf(task.date) }
+    var startTime by rememberSaveable { mutableStateOf(task.startTime) }
+    var endTime by rememberSaveable { mutableStateOf(task.endTime) }
+    var selectedCategory by rememberSaveable {
+        mutableStateOf(TaskCategory.valueOf(task.category))
+    }
+
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Edit Task") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Task Title") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = "Category",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            CategoryPicker(
+                selected = selectedCategory,
+                onSelect = { selectedCategory = it }
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            DatePickerField(
+                date = date,
+                onDateSelected = { date = it }
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            StartTimePickerField(
+                time = startTime,
+                onTimeSelected = { startTime = it }
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            EndTimePickerField(
+                time = endTime,
+                onTimeSelected = { endTime = it }
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // ---- Save Changes ----
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    scope.launch {
+
+                        if (title.isBlank() || description.isBlank() ||
+                            date.isBlank() || startTime.isBlank() || endTime.isBlank()
+                        ) {
+                            Toast.makeText(
+                                context,
+                                "All fields are required",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@launch
+                        }
+
+                        try {
+                            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                            val start = timeFormat.parse(startTime)
+                            val end = timeFormat.parse(endTime)
+
+                            if (start!!.after(end)) {
+                                Toast.makeText(
+                                    context,
+                                    "End time must be later than start time",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@launch
+                            }
+
+                            val updatedTask = task.copy(
+                                title = title,
+                                description = description,
+                                date = date,
+                                startTime = startTime,
+                                endTime = endTime,
+                                category = selectedCategory.name
+                            )
+
+                            val success = firebaseHelper.updateTask(userId, updatedTask)
+
+                            if (success) {
+                                Toast.makeText(
+                                    context,
+                                    "Task updated",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                onTaskUpdated()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Failed to update task",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                context,
+                                "Invalid time format",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            ) {
+                Text("Save Changes")
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ---- Delete Task ----
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                onClick = {
+                    scope.launch {
+                        val success = firebaseHelper.deleteTask(userId, task.id)
+                        if (success) {
+                            Toast.makeText(
+                                context,
+                                "Task deleted",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            onBack()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Failed to delete task",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            ) {
+                Text("Delete Task")
             }
         }
     }
