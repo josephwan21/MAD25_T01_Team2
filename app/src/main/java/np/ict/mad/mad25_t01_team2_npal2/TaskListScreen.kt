@@ -62,12 +62,15 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.api.Context
@@ -526,11 +529,15 @@ fun CreateTaskScreen(
     firebaseHelper: FirebaseHelper,
     userId: String
 ) {
+    val textFieldValueSaver = Saver<TextFieldValue, String>(
+        save = { it.text },                  // how to save: just the text
+        restore = { TextFieldValue(it) }     // how to restore: make a new TextFieldValue from text
+    )
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var date by rememberSaveable { mutableStateOf("") }
-    var startTime by rememberSaveable { mutableStateOf("") }
-    var endTime by rememberSaveable { mutableStateOf("") }
+    var date by rememberSaveable(stateSaver = textFieldValueSaver) { mutableStateOf(TextFieldValue("")) }
+    var startTime by rememberSaveable(stateSaver = textFieldValueSaver) { mutableStateOf(TextFieldValue("")) }
+    var endTime by rememberSaveable(stateSaver = textFieldValueSaver) { mutableStateOf(TextFieldValue("")) }
     var selectedCategory by rememberSaveable { mutableStateOf(TaskCategory.PERSONAL) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -621,16 +628,16 @@ fun CreateTaskScreen(
                 onClick = {
                     scope.launch {
 
-                        if (title.isBlank() || description.isBlank() || date.isBlank() ||
-                            startTime.isBlank() || endTime.isBlank()
+                        if (title.isBlank() || description.isBlank() || date.text.isBlank() ||
+                            startTime.text.isBlank() || endTime.text.isBlank()
                         ) {
                             Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
                         try {
                             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-                            val start = timeFormat.parse(startTime)
-                            val end = timeFormat.parse(endTime)
+                            val start = timeFormat.parse(startTime.text)
+                            val end = timeFormat.parse(endTime.text)
 
                             if (start!!.after(end)) {
                                 Toast.makeText(
@@ -644,10 +651,10 @@ fun CreateTaskScreen(
                             val formattedDate = try {
                                 val inputFormat = SimpleDateFormat("yyyy-M-d", Locale.getDefault()) // whatever comes from DatePicker
                                 val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                val parsedDate = inputFormat.parse(date)
+                                val parsedDate = inputFormat.parse(date.text)
                                 outputFormat.format(parsedDate!!)
                             } catch (e: Exception) {
-                                date // fallback if parsing fails
+                                date.text // fallback if parsing fails
                             }
                             val task = Task(
                                 id = "",
@@ -655,8 +662,8 @@ fun CreateTaskScreen(
                                 title = title,
                                 description = description,
                                 date = formattedDate,
-                                startTime = startTime,
-                                endTime = endTime,
+                                startTime = startTime.text,
+                                endTime = endTime.text,
                                 category = selectedCategory.name
 
                             )
@@ -690,11 +697,21 @@ fun EditTaskScreen(
     firebaseHelper: FirebaseHelper,
     userId: String
 ) {
+    val textFieldValueSaver = Saver<TextFieldValue, String>(
+        save = { it.text },
+        restore = { TextFieldValue(it) }
+    )
     var title by rememberSaveable { mutableStateOf(task.title) }
     var description by rememberSaveable { mutableStateOf(task.description) }
-    var date by rememberSaveable { mutableStateOf(task.date) }
-    var startTime by rememberSaveable { mutableStateOf(task.startTime) }
-    var endTime by rememberSaveable { mutableStateOf(task.endTime) }
+    var date by rememberSaveable(stateSaver = textFieldValueSaver) {
+        mutableStateOf(TextFieldValue(task.date))
+    }
+    var startTime by rememberSaveable(stateSaver = textFieldValueSaver) {
+        mutableStateOf(TextFieldValue(task.startTime))
+    }
+    var endTime by rememberSaveable(stateSaver = textFieldValueSaver) {
+        mutableStateOf(TextFieldValue(task.endTime))
+    }
     var selectedCategory by rememberSaveable {
         mutableStateOf(TaskCategory.valueOf(task.category))
     }
@@ -786,7 +803,7 @@ fun EditTaskScreen(
                     scope.launch {
 
                         if (title.isBlank() || description.isBlank() ||
-                            date.isBlank() || startTime.isBlank() || endTime.isBlank()
+                            date.text.isBlank() || startTime.text.isBlank() || endTime.text.isBlank()
                         ) {
                             Toast.makeText(
                                 context,
@@ -798,8 +815,8 @@ fun EditTaskScreen(
 
                         try {
                             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-                            val start = timeFormat.parse(startTime)
-                            val end = timeFormat.parse(endTime)
+                            val start = timeFormat.parse(startTime.text)
+                            val end = timeFormat.parse(endTime.text)
 
                             if (start!!.after(end)) {
                                 Toast.makeText(
@@ -813,9 +830,9 @@ fun EditTaskScreen(
                             val updatedTask = task.copy(
                                 title = title,
                                 description = description,
-                                date = date,
-                                startTime = startTime,
-                                endTime = endTime,
+                                date = date.text,
+                                startTime = startTime.text,
+                                endTime = endTime.text,
                                 category = selectedCategory.name
                             )
 
@@ -866,6 +883,7 @@ fun EditTaskScreen(
                                 "Task deleted",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            onTaskUpdated()
                             onBack()
                         } else {
                             Toast.makeText(
@@ -970,32 +988,34 @@ fun TaskListTopBar() {
 
 @Composable
 fun DatePickerField(
-    date: String,
-    onDateSelected: (String) -> Unit,
+    date: TextFieldValue,
+    onDateSelected: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
 
-    // Wrapper Box to handle clicks
-    Box(modifier = modifier.clickable {
-        val datePicker = DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                onDateSelected("$year-${month + 1}-$dayOfMonth")
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        )
-        datePicker.show()
-    })
-
     OutlinedTextField(
         value = date,
-        onValueChange = {},
-        label = { Text("Date") },
-        readOnly = true,
+        onValueChange = { input ->
+            val digits = input.text.filter { it.isDigit() }.take(8)
+
+            val formatted = when (digits.length) {
+                in 0..4 -> digits
+                in 5..6 -> "${digits.substring(0,4)}-${digits.substring(4)}"
+                else -> "${digits.substring(0,4)}-${digits.substring(4,6)}-${digits.substring(6)}"
+            }
+
+            val cursorPos = formatted.length
+
+            onDateSelected(
+                TextFieldValue(
+                    text = formatted,
+                    selection = TextRange(cursorPos)
+                )
+            )
+        },
+        label = { Text("Date (yyyy-MM-dd)") },
         trailingIcon = {
             Icon(Icons.Default.DateRange,
                 contentDescription = "Select date",
@@ -1003,8 +1023,19 @@ fun DatePickerField(
                     val datePicker = DatePickerDialog(
                         context,
                         { _, year, month, dayOfMonth ->
-                            onDateSelected("$year-${month + 1}-$dayOfMonth")
-                        },
+                            val formatted = String.format(
+                                "%04d-%02d-%02d",
+                                year,
+                                month + 1,
+                                dayOfMonth
+                                )
+                                onDateSelected(
+                                    TextFieldValue(
+                                        text = formatted,
+                                        selection = TextRange(formatted.length)
+                                    )
+                                )
+                            },
                         calendar.get(Calendar.YEAR),
                         calendar.get(Calendar.MONTH),
                         calendar.get(Calendar.DAY_OF_MONTH)
@@ -1019,7 +1050,18 @@ fun DatePickerField(
                 DatePickerDialog(
                     context,
                     { _, year, month, dayOfMonth ->
-                        onDateSelected("$year-${month + 1}-$dayOfMonth")
+                        val formatted = String.format(
+                            "%04d-%02d-%02d",
+                            year,
+                            month + 1,
+                            dayOfMonth
+                        )
+                        onDateSelected(
+                            TextFieldValue(
+                                text = formatted,
+                                selection = TextRange(formatted.length)
+                            )
+                        )
                     },
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
@@ -1031,8 +1073,8 @@ fun DatePickerField(
 
 @Composable
 fun StartTimePickerField(
-    time: String,
-    onTimeSelected: (String) -> Unit,
+    time: TextFieldValue,
+    onTimeSelected: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1040,9 +1082,25 @@ fun StartTimePickerField(
 
     OutlinedTextField(
         value = time,
-        onValueChange = {},
+        onValueChange = { input ->
+            val digits = input.text.filter { it.isDigit() }.take(4)
+
+            val formatted = when (digits.length) {
+                0, 1, 2 -> digits
+                3 -> "${digits.substring(0,2)}:${digits.substring(2)}"
+                else -> "${digits.substring(0,2)}:${digits.substring(2,4)}"
+            }
+
+            val cursorPos = formatted.length
+
+            onTimeSelected(
+                TextFieldValue(
+                    text = formatted,
+                    selection = TextRange(cursorPos)
+                )
+            )
+        },
         label = { Text("Start Time") },
-        readOnly = true,
         trailingIcon = {
             Icon( Icons.Default.Create,
                 contentDescription = "Select time",
@@ -1050,11 +1108,17 @@ fun StartTimePickerField(
                     TimePickerDialog(
                         context,
                         { _, hourOfDay, minute ->
-                            onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
+                            val formatted = String.format("%02d:%02d", hourOfDay, minute)
+                            onTimeSelected(
+                                TextFieldValue(
+                                    text = formatted,
+                                    selection = TextRange(formatted.length)
+                                )
+                            )
                         },
                         calendar.get(Calendar.HOUR_OF_DAY),
                         calendar.get(Calendar.MINUTE),
-                        true
+                        false
                     ).show()
                 }
             )
@@ -1065,7 +1129,13 @@ fun StartTimePickerField(
                 TimePickerDialog(
                     context,
                     { _, hourOfDay, minute ->
-                        onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
+                        val formatted = String.format("%02d:%02d", hourOfDay, minute)
+                        onTimeSelected(
+                            TextFieldValue(
+                                text = formatted,
+                                selection = TextRange(formatted.length)
+                            )
+                        )
                     },
                     calendar.get(Calendar.HOUR_OF_DAY),
                     calendar.get(Calendar.MINUTE),
@@ -1077,8 +1147,8 @@ fun StartTimePickerField(
 }
 @Composable
 fun EndTimePickerField(
-    time: String,
-    onTimeSelected: (String) -> Unit,
+    time: TextFieldValue,
+    onTimeSelected: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1086,9 +1156,25 @@ fun EndTimePickerField(
 
     OutlinedTextField(
         value = time,
-        onValueChange = {},
+        onValueChange = { input ->
+            val digits = input.text.filter { it.isDigit() }.take(4)
+
+            val formatted = when (digits.length) {
+                0, 1, 2 -> digits
+                3 -> "${digits.substring(0,2)}:${digits.substring(2)}"
+                else -> "${digits.substring(0,2)}:${digits.substring(2,4)}"
+            }
+
+            val cursorPos = formatted.length
+
+            onTimeSelected(
+                TextFieldValue(
+                    text = formatted,
+                    selection = TextRange(cursorPos)
+                )
+            )
+        },
         label = { Text("End Time") },
-        readOnly = true,
         trailingIcon = {
             Icon( Icons.Default.Create,
                 contentDescription = "Select time",
@@ -1096,11 +1182,17 @@ fun EndTimePickerField(
                     TimePickerDialog(
                         context,
                         { _, hourOfDay, minute ->
-                            onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
+                            val formatted = String.format("%02d:%02d", hourOfDay, minute)
+                            onTimeSelected(
+                                TextFieldValue(
+                                    text = formatted,
+                                    selection = TextRange(formatted.length)
+                                )
+                            )
                         },
                         calendar.get(Calendar.HOUR_OF_DAY),
                         calendar.get(Calendar.MINUTE),
-                        true
+                        false
                     ).show()
                 }
             )
@@ -1111,7 +1203,13 @@ fun EndTimePickerField(
                 TimePickerDialog(
                     context,
                     { _, hourOfDay, minute ->
-                        onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
+                        val formatted = String.format("%02d:%02d", hourOfDay, minute)
+                        onTimeSelected(
+                            TextFieldValue(
+                                text = formatted,
+                                selection = TextRange(formatted.length)
+                            )
+                        )
                     },
                     calendar.get(Calendar.HOUR_OF_DAY),
                     calendar.get(Calendar.MINUTE),
