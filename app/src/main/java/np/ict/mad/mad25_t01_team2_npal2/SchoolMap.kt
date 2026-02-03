@@ -1,7 +1,8 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
@@ -22,6 +23,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntSize
+
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroidSize
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.input.pointer.positionChanged
+import kotlin.math.abs
 
 // Logic 1: Define data structures for handling GPS coordinates.
 // Data class for GPS coordinates
@@ -56,7 +65,7 @@ private val tappableRegions = listOf(
 
 @Composable
 fun SchoolMap() {
-    var scale by remember { mutableStateOf(1f) }
+    var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var userInteracted by remember { mutableStateOf(false) }
 
@@ -133,60 +142,93 @@ fun SchoolMap() {
             .fillMaxSize()
             .onSizeChanged { viewSize = it }
             .pointerInput(Unit) {
-                detectTransformGestures { centroid, pan, zoom, _ ->
-                    userInteracted = true
+                awaitEachGesture {
+                    var zoom = 1f
+                    var pan = Offset.Zero
+                    var pastTouchSlop = false
+                    val touchSlop = viewConfiguration.touchSlop
+                    var lockedToPanZoom = false
 
-                    scale = (scale * zoom).coerceIn(0.5f, 5f)
+                    val down = awaitFirstDown()
+                    do {
+                        val event = awaitPointerEvent()
+                        val canceled = event.changes.any { it.isConsumed }
+                        if (!canceled) {
+                            val zoomChange = event.calculateZoom()
+                            val panChange = event.calculatePan()
 
-                    val newOffset = offset + pan
+                            if (!pastTouchSlop) {
+                                zoom *= zoomChange
+                                pan += panChange
 
-                    // Calculate bounds for panning
-                    val maxOffsetX = (viewSize.width * scale - viewSize.width) / 2
-                    val maxOffsetY = (viewSize.height * scale - viewSize.height) / 2
+                                val centroidSize = event.calculateCentroidSize(useCurrent = false)
+                                val zoomMotion = abs(1 - zoom) * centroidSize
+                                val panMotion = pan.getDistance()
 
-                    // Clamp the offset to prevent panning off-screen
-                    offset = Offset(
-                        newOffset.x.coerceIn(-maxOffsetX, maxOffsetX),
-                        newOffset.y.coerceIn(-maxOffsetY, maxOffsetY)
-                    )
-                }
-                detectTapGestures { tapOffset ->
-                    val imageIntrinsicSize = painter.intrinsicSize
-                    if (viewSize == IntSize.Zero || imageIntrinsicSize == Size.Zero) return@detectTapGestures
+                                if (zoomMotion > touchSlop || panMotion > touchSlop) {
+                                    pastTouchSlop = true
+                                    lockedToPanZoom = zoomChange != 1f || panChange != Offset.Zero
+                                }
+                            }
 
-                    val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f)
-                    val tapOnFitImage = viewCenter + (tapOffset - viewCenter - offset) / scale
+                            if (pastTouchSlop) {
+                                if (lockedToPanZoom || zoomChange != 1f || panChange != Offset.Zero) {
+                                    userInteracted = true
+                                    scale = (scale * zoomChange).coerceIn(1f, 5f)
+                                    val newOffset = offset + panChange
+                                    val maxOffsetX = (viewSize.width * scale - viewSize.width) / 2f
+                                    val maxOffsetY = (viewSize.height * scale - viewSize.height) / 2f
+                                    offset = Offset(
+                                        newOffset.x.coerceIn(-maxOffsetX, maxOffsetX),
+                                        newOffset.y.coerceIn(-maxOffsetY, maxOffsetY)
+                                    )
+                                    event.changes.forEach {
+                                        if (it.positionChanged()) {
+                                            it.consume()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } while (!canceled && event.changes.any { it.pressed })
 
-                    val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
-                    val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
-                    val scaledImageWidth: Float
-                    val scaledImageHeight: Float
-                    if (imageAspectRatio > viewAspectRatio) {
-                        scaledImageWidth = viewSize.width.toFloat()
-                        scaledImageHeight = scaledImageWidth / imageAspectRatio
-                    } else {
-                        scaledImageHeight = viewSize.height.toFloat()
-                        scaledImageWidth = scaledImageHeight * imageAspectRatio
+                    if (!pastTouchSlop) {
+                        // Tap
+                        val tapOffset = down.position
+                        val imageIntrinsicSize = painter.intrinsicSize
+                        if (viewSize != IntSize.Zero && imageIntrinsicSize != Size.Zero) {
+                            val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f)
+                            val tapOnFitImage = viewCenter + (tapOffset - viewCenter - offset) / scale
+
+                            val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
+                            val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
+                            val scaledImageWidth: Float
+                            val scaledImageHeight: Float
+                            if (imageAspectRatio > viewAspectRatio) {
+                                scaledImageWidth = viewSize.width.toFloat()
+                                scaledImageHeight = scaledImageWidth / imageAspectRatio
+                            } else {
+                                scaledImageHeight = viewSize.height.toFloat()
+                                scaledImageWidth = scaledImageHeight * imageAspectRatio
+                            }
+                            val imageOffsetX = (viewSize.width - scaledImageWidth) / 2f
+                            val imageOffsetY = (viewSize.height - scaledImageHeight) / 2f
+                            val imageRectInView = Rect(
+                                left = imageOffsetX,
+                                top = imageOffsetY,
+                                right = imageOffsetX + scaledImageWidth,
+                                bottom = imageOffsetY + scaledImageHeight
+                            )
+
+                            if (imageRectInView.contains(tapOnFitImage)) {
+                                val tapOnScaledImage = tapOnFitImage - imageRectInView.topLeft
+                                val imageX = (tapOnScaledImage.x / imageRectInView.width) * imageIntrinsicSize.width
+                                val imageY = (tapOnScaledImage.y / imageRectInView.height) * imageIntrinsicSize.height
+                                val tappedImagePoint = Offset(imageX, imageY)
+                                selectedRegion = tappableRegions.find { it.rect.contains(tappedImagePoint) }
+                            }
+                        }
                     }
-                    val imageOffsetX = (viewSize.width - scaledImageWidth) / 2f
-                    val imageOffsetY = (viewSize.height - scaledImageHeight) / 2f
-                    val imageRectInView = Rect(
-                        left = imageOffsetX,
-                        top = imageOffsetY,
-                        right = imageOffsetX + scaledImageWidth,
-                        bottom = imageOffsetY + scaledImageHeight
-                    )
-
-                    if (!imageRectInView.contains(tapOnFitImage)) {
-                        return@detectTapGestures
-                    }
-
-                    val tapOnScaledImage = tapOnFitImage - imageRectInView.topLeft
-                    val imageX = (tapOnScaledImage.x / imageRectInView.width) * imageIntrinsicSize.width
-                    val imageY = (tapOnScaledImage.y / imageRectInView.height) * imageIntrinsicSize.height
-                    val tappedImagePoint = Offset(imageX, imageY)
-
-                    selectedRegion = tappableRegions.find { it.rect.contains(tappedImagePoint) }
                 }
             }
     ) {
