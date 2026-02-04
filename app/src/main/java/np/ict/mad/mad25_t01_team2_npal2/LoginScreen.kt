@@ -1,5 +1,6 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
+import android.R.attr.singleLine
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -38,6 +39,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -89,6 +93,7 @@ import java.util.concurrent.Executor
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
+    onRegisterClick: () -> Unit,
     modifier: Modifier = Modifier
 ){
     var username by rememberSaveable { mutableStateOf("")}
@@ -194,29 +199,137 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.padding(8.dp))
 
                 Text(text = "New Student?")
+                TextButton(
+                    onClick = onRegisterClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Click to Get Started")
+                }
+//                Button(
+//                    onClick = {
+//                        if(username.isNotEmpty() && password.isNotEmpty()){
+//                            scope.launch {
+//                                val isCreated = performSignUp(context, username, password)
+//                                if(isCreated){
+//                                    Toast.makeText(context, "User has been successfully created", Toast.LENGTH_LONG).show()
+//                                }else{
+//                                    Toast.makeText(context, "Failed to create user", Toast.LENGTH_LONG).show()
+//                                }
+//                            }
+//                        }else{
+//                            Toast.makeText(context, "Please provide more details.", Toast.LENGTH_SHORT).show()
+//                        }
+//                    }
+//                )
+//                {
+//                    Text(text = "Register")
+//                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RegisterScreen(
+    onRegisterSuccess: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var username by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(id = R.drawable.login_image),
+            contentDescription = "School Image",
+            alignment = Alignment.TopCenter,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Register for NPAL2",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = null)
+                        }
+                    },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Button(
                     onClick = {
-                        if(username.isNotEmpty() && password.isNotEmpty()){
+                        if (username.isNotBlank() && password.isNotBlank()) {
                             scope.launch {
-                                val isCreated = performSignUp(context, username, password)
-                                if(isCreated){
-                                    Toast.makeText(context, "User has been successfully created", Toast.LENGTH_LONG).show()
-                                }else{
-                                    Toast.makeText(context, "Failed to create user", Toast.LENGTH_LONG).show()
+                                val created = performSignUp(context, username, password)
+                                if (created) {
+                                    Toast.makeText(context, "User successfully created", Toast.LENGTH_SHORT).show()
+                                    onRegisterSuccess()
+                                } else {
+                                    Toast.makeText(context, "Failed to create user", Toast.LENGTH_SHORT).show()
                                 }
                             }
-                        }else{
-                            Toast.makeText(context, "Please provide more details.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
                         }
-                    }
-                )
-                {
-                    Text(text = "Register")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Register")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextButton(onClick = onBack) {
+                    Text("Already a student? Back to Login")
                 }
             }
         }
     }
 }
+
 
 suspend fun performSignUp(context: Context, username: String, password: String): Boolean{
     //Firebase
