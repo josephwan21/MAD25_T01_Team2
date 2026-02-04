@@ -119,7 +119,6 @@ Allows students to customise app preferences, notification settings, and display
 
 ### Joseph
 - Task Management
-- Biometric Login
 
 ### Monisha
 - Student Calendar
@@ -134,7 +133,7 @@ Allows students to customise app preferences, notification settings, and display
 ### Emily
 
 ### Joseph
-- Encrypted Login
+- Biometric Login
 - Settings & Personalization
 
 ### Monisha
