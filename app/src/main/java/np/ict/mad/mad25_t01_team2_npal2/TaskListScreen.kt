@@ -146,6 +146,7 @@ fun TaskListScreenContent(
     val scope = rememberCoroutineScope()
 
     var editingTask by remember { mutableStateOf<Task?>(null) }
+    val context = LocalContext.current
 
     //val tasksByHour = groupTasksByHour(tasks)
 
@@ -155,6 +156,7 @@ fun TaskListScreenContent(
         val today = todayYMD()
         tasks.filter { it.date == today }.forEach { task ->
             NotificationCenter.pushOnce(
+                context = context,
                 key = "today-${task.id}", // prevents duplicates
                 userId = userId,
                 title = "Task Due Today",
