@@ -47,16 +47,17 @@ import java.text.SimpleDateFormat
     }
 }*/
 
-@PreviewScreenSizes
 @Composable
-fun MAD25_T01_Team2_NPAL2App() {
+fun MAD25_T01_Team2_NPAL2App(
+    onLogout : () -> Unit
+) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     val firebaseHelper = FirebaseHelper()
     //val currentUserId = "example_user_id" // or get it from FirebaseAuth.currentUser?.uid
     val currentUser = FirebaseAuth.getInstance().currentUser
     val currentUserId = currentUser?.uid ?: ""
     var showNotifications by rememberSaveable { mutableStateOf(false) }
-
+    var settingsSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -72,6 +73,7 @@ fun MAD25_T01_Team2_NPAL2App() {
                     selected = it == currentDestination,
                     onClick = {
                         showNotifications = false // close notif screen if open
+                        settingsSubScreen = null
                         currentDestination = it
                     }
                 )
@@ -79,6 +81,15 @@ fun MAD25_T01_Team2_NPAL2App() {
         }
     ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->             // If user opened notifications (via bell), show it FULL SCREEN
+            settingsSubScreen?.let { subScreen ->
+                when (subScreen) {
+                    SettingsSubScreen.NOTIFICATIONS -> NotificationSettingsScreen(onBack = { settingsSubScreen = null }, modifier = Modifier)
+                    SettingsSubScreen.ACCOUNT -> AccountScreen(onBack = { settingsSubScreen = null }, firebaseHelper, modifier = Modifier)
+                    SettingsSubScreen.SUPPORT -> HelpSupportScreen(onBack = { settingsSubScreen = null }, modifier = Modifier)
+                }
+                return@Scaffold
+            }
+
             if (showNotifications) {
                 NotificationsScreen(
                     userId = currentUserId,
@@ -113,9 +124,13 @@ fun MAD25_T01_Team2_NPAL2App() {
                     )
                 }
                 AppDestinations.MAP -> SchoolMap()
-
-
-
+                AppDestinations.SETTINGS -> SettingsScreen(
+                    onLogout = onLogout,
+                    onAccountClick = { settingsSubScreen = SettingsSubScreen.ACCOUNT },
+                    onNotificationsClick = { settingsSubScreen = SettingsSubScreen.NOTIFICATIONS },
+                    onHelpClick = { settingsSubScreen = SettingsSubScreen.SUPPORT},
+                    modifier = Modifier.padding(innerPadding)
+                )
             }
         }
     }
@@ -130,8 +145,14 @@ enum class AppDestinations(
     CREATE_TASKS("Add Task", Icons.Default.AddCircle),
     CALENDAR("Calendar", Icons.Default.DateRange),
     MAP("School Map", Icons.Default.Place),
+    SETTINGS("Settings", Icons.Default.Settings)
+}
 
+enum class SettingsSubScreen {
+    NOTIFICATIONS,
+    ACCOUNT,
 
+    SUPPORT
 }
 
 

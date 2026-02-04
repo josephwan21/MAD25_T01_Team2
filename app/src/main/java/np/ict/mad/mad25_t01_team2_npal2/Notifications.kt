@@ -1,5 +1,6 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
+import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -42,7 +43,9 @@ object NotificationCenter {
 
     private val pushedKeys = mutableSetOf<String>()
 
-    fun push(userId: String, title: String, message: String) {
+    fun push(context: Context, userId: String, title: String, message: String) {
+        if (!isNotificationsEnabled(context)) return
+
         val notification = InAppNotification(
             id = UUID.randomUUID().toString(),
             userId = userId,
@@ -52,10 +55,10 @@ object NotificationCenter {
         _notifications.value = listOf(notification) + _notifications.value
     }
 
-    fun pushOnce(key: String, userId: String, title: String, message: String) {
+    fun pushOnce(context: Context, key: String, userId: String, title: String, message: String) {
         if (pushedKeys.contains(key)) return
         pushedKeys.add(key)
-        push(userId, title, message)
+        push(context, userId, title, message)
     }
 
     fun markAllRead(userId: String) {
@@ -155,3 +158,14 @@ fun NotificationsScreen(
         }
     }
 }
+
+fun isNotificationsEnabled(context: Context): Boolean {
+    val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    return prefs.getBoolean("notifications_enabled", true)
+}
+
+fun setNotificationsEnabled(context: Context, enabled: Boolean) {
+    val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    prefs.edit().putBoolean("notifications_enabled", enabled).apply()
+}
+
