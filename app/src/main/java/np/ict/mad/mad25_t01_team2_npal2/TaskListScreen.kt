@@ -149,21 +149,12 @@ fun TaskListScreenContent(
     val context = LocalContext.current
 
     //val tasksByHour = groupTasksByHour(tasks)
-
     LaunchedEffect(userId) {
         tasks = firebaseHelper.getTasks(userId)
-
-        val today = todayYMD()
-        tasks.filter { it.date == today }.forEach { task ->
-            NotificationCenter.pushOnce(
-                context = context,
-                key = "today-${task.id}", // prevents duplicates
-                userId = userId,
-                title = "Task Due Today",
-                message = "${task.title} (${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)})"
-            )
-        }
+        TaskReminder.run(context, firebaseHelper, userId, tasks)
     }
+
+
 
     if (editingTask != null) {
         EditTaskScreen(
