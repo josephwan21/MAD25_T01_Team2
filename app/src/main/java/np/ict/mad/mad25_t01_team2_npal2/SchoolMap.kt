@@ -1,6 +1,8 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,13 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +45,8 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
@@ -138,21 +140,164 @@ fun LocationDashboard(
         }
     }
 }
+@SuppressLint("DefaultLocale")
+@Composable
+fun ZoomControls(
+    currentZoom: Float,
+    onZoomChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Actual zoom levels (what's applied to the image)
+    val zoomLevels = listOf(1.5f, 2f, 2.5f, 3f, 4f)
 
+    // Display text (what the user sees)
+    val zoomText = when (currentZoom) {
+        1.5f -> "0.5x"
+        2f -> "1x"
+        2.5f -> "1.5x"
+        3f -> "2x"
+        4f -> "3x"
+        else -> String.format("%.1fx", currentZoom / 2f) // Fallback: divide by 2 for display
+    }
+
+    Card(
+        modifier = modifier.padding(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Zoom In button
+            Text(
+                text = "+",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown()
+                            // Find current index and move to next
+                            val currentIndex = zoomLevels.indexOf(currentZoom)
+                            val nextIndex = if (currentIndex == -1) {
+                                0 // Default to first if not found
+                            } else {
+                                (currentIndex + 1) % zoomLevels.size // Cycle through
+                            }
+                            onZoomChange(zoomLevels[nextIndex])
+                        }
+                    }
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+
+            // Current zoom level
+            Text(
+                text = zoomText,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+
+            // Zoom Out button
+            Text(
+                text = "−",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown()
+                            // Find current index and move to previous
+                            val currentIndex = zoomLevels.indexOf(currentZoom)
+                            val prevIndex = when (currentIndex) {
+                                -1 -> {
+                                    0 // Default to first if not found
+                                }
+                                0 -> {
+                                    zoomLevels.size - 1 // Cycle to end
+                                }
+                                else -> {
+                                    currentIndex - 1
+                                }
+                            }
+                            onZoomChange(zoomLevels[prevIndex])
+                        }
+                    }
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
 @Composable
 fun SchoolMap() {
-    var scale by remember { mutableFloatStateOf(1f) }
+    val density = LocalDensity.current
+    var scale by remember { mutableFloatStateOf(2f) }
+    var targetScale by remember { mutableFloatStateOf(2f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var userInteracted by remember { mutableStateOf(false) }
     var isInteracting by remember { mutableStateOf(false) }
 
-    var selectedRegion by remember { mutableStateOf<TappableRegion?>(null) }
     var dashboardRegion by remember { mutableStateOf<TappableRegion?>(null) }
     var isDashboardExpanded by remember { mutableStateOf(false) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     val painter = painterResource(id = R.drawable.campus_map_1)
 
     val currentUserLocation = GpsCoordinates(1.377, 103.848) // Simulated location for "Main Entrance"
+
+    // Function to detect region at screen center
+    fun detectRegionAtCenter() {
+        val imageIntrinsicSize = painter.intrinsicSize
+        if (viewSize == IntSize.Zero || imageIntrinsicSize == Size.Zero) return
+
+        // Offset adjusts with zoom - 10 pixels at scale 1.0, scales proportionally
+        val pinOffset = 10f * scale
+
+        val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f + pinOffset)
+
+        val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
+        val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
+        val scaledImageWidth: Float
+        val scaledImageHeight: Float
+        if (imageAspectRatio > viewAspectRatio) {
+            scaledImageWidth = viewSize.width.toFloat()
+            scaledImageHeight = scaledImageWidth / imageAspectRatio
+        } else {
+            scaledImageHeight = viewSize.height.toFloat()
+            scaledImageWidth = scaledImageHeight * imageAspectRatio
+        }
+        val imageOffsetX = (viewSize.width - scaledImageWidth) / 2f
+        val imageOffsetY = (viewSize.height - scaledImageHeight) / 2f
+        val imageRectInView = Rect(
+            left = imageOffsetX,
+            top = imageOffsetY,
+            right = imageOffsetX + scaledImageWidth,
+            bottom = imageOffsetY + scaledImageHeight
+        )
+
+        // Transform screen center (adjusted for pin tip) to image coordinates
+        val centerPointOnFitImage = viewCenter + (-offset) / scale
+
+        if (imageRectInView.contains(centerPointOnFitImage)) {
+            val centerOnScaledImage = centerPointOnFitImage - imageRectInView.topLeft
+            val imageX = (centerOnScaledImage.x / imageRectInView.width) * imageIntrinsicSize.width
+            val imageY = (centerOnScaledImage.y / imageRectInView.height) * imageIntrinsicSize.height
+            val centerImagePoint = Offset(imageX, imageY)
+
+            val detectedRegion = tappableRegions.find { it.rect.contains(centerImagePoint) }
+            // Only update if a region is found, otherwise keep the previous one
+            if (detectedRegion != null) {
+                dashboardRegion = detectedRegion
+            }
+        }
+    }
+
+    // Detect region when user stops interacting
+    LaunchedEffect(isInteracting) {
+        if (!isInteracting && userInteracted) {
+            kotlinx.coroutines.delay(300) // Small delay after stopping
+            detectRegionAtCenter()
+        }
+    }
 
     LaunchedEffect(viewSize) {
         if (viewSize == IntSize.Zero || userInteracted) return@LaunchedEffect
@@ -190,7 +335,7 @@ fun SchoolMap() {
                 y = imageRectInView.top + (targetCenterOnImage.y / imageIntrinsicSize.height) * imageRectInView.height
             )
 
-            val viewCenter = Offset(viewSize.width / 2f, viewSize.height * 0.6f) // Adjusted to be slightly higher
+            val viewCenter = Offset(viewSize.width / 2f, viewSize.height * 0.6f)
             val newOffsetUnconstrained = (viewCenter - targetCenterInFitImage) * newScale
             val maxOffsetX = (viewSize.width * newScale - viewSize.width) / 2f
             val maxOffsetY = (viewSize.height * newScale - viewSize.height) / 2f
@@ -203,24 +348,63 @@ fun SchoolMap() {
             offset = newOffset
         }
     }
+    // Animate to target zoom when preset is selected
+// Animate to target zoom when preset is selected
+    LaunchedEffect(targetScale) {
+        if (targetScale != scale && !isInteracting) {
+            scale = targetScale
+            // Recalculate offset constraints for new scale
+            val imageIntrinsicSize = painter.intrinsicSize
+            if (imageIntrinsicSize != Size.Zero && viewSize != IntSize.Zero) {
+                val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
+                val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
 
-    if (selectedRegion != null) {
-        AlertDialog(
-            onDismissRequest = { selectedRegion = null },
-            title = { Text(text = selectedRegion!!.name) },
-            text = { Text("You tapped on ${selectedRegion!!.name}.") },
-            confirmButton = {
-                TextButton(onClick = { selectedRegion = null }) {
-                    Text("OK")
+                val fittedWidth: Float
+                val fittedHeight: Float
+                if (imageAspectRatio > viewAspectRatio) {
+                    fittedWidth = viewSize.width.toFloat()
+                    fittedHeight = fittedWidth / imageAspectRatio
+                } else {
+                    fittedHeight = viewSize.height.toFloat()
+                    fittedWidth = fittedHeight * imageAspectRatio
                 }
+
+                val scaledWidth = fittedWidth * scale
+                val scaledHeight = fittedHeight * scale
+
+                val borderPxX = with(density) { 10.dp.toPx() }
+                val borderPxY = with(density) { 15.dp.toPx() }
+
+                val maxOffsetX = if (scaledWidth > viewSize.width) {
+                    ((scaledWidth - viewSize.width) / 2f + borderPxX)
+                } else if (fittedWidth < viewSize.width) {
+                    0f
+                } else {
+                    0f
+                }.coerceAtLeast(0f)
+
+                val maxOffsetY = if (scaledHeight > viewSize.height) {
+                    ((scaledHeight - viewSize.height) / 2f + borderPxY)
+                } else if (fittedHeight < viewSize.height) {
+                    0f
+                } else {
+                    0f
+                }.coerceAtLeast(0f)
+
+                // Constrain current offset to new limits
+                offset = Offset(
+                    offset.x.coerceIn(-maxOffsetX, maxOffsetX),
+                    offset.y.coerceIn(-maxOffsetY, maxOffsetY)
+                )
             }
-        )
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFFADD8E6)) // Light blue background
                 .onSizeChanged { viewSize = it }
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -230,7 +414,7 @@ fun SchoolMap() {
                         val touchSlop = viewConfiguration.touchSlop
                         var lockedToPanZoom = false
 
-                        val down = awaitFirstDown()
+                        awaitFirstDown()
                         do {
                             val event = awaitPointerEvent()
                             val canceled = event.changes.any { it.isConsumed }
@@ -257,23 +441,67 @@ fun SchoolMap() {
                                         isInteracting = true
                                         userInteracted = true
 
-                                        // Update scale first
-                                        val newScale = (scale * zoomChange).coerceIn(1f, 5f)
+                                        // First update the scale - CORRECTED RANGE
+                                        val newScale = (scale * zoomChange).coerceIn(1.5f, 4f)
 
-                                        // Calculate new offset with pan
-                                        val newOffset = offset + panChange
+                                        // Calculate what the new offset would be
+                                        val newOffsetX = offset.x + panChange.x
+                                        val newOffsetY = offset.y + panChange.y
 
-                                        // Calculate pan constraints based on the NEW scale
-                                        val maxOffsetX = ((viewSize.width * newScale - viewSize.width) / 2f).coerceAtLeast(0f)
-                                        val maxOffsetY = ((viewSize.height * newScale - viewSize.height) / 2f).coerceAtLeast(0f)
+                                        // Get image intrinsic size to calculate fitted dimensions
+                                        val imageIntrinsicSize = painter.intrinsicSize
 
-                                        // Apply constraints
-                                        offset = Offset(
-                                            newOffset.x.coerceIn(-maxOffsetX, maxOffsetX),
-                                            newOffset.y.coerceIn(-maxOffsetY, maxOffsetY)
-                                        )
+                                        if (imageIntrinsicSize != Size.Zero) {
+                                            val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
+                                            val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
+
+                                            // Calculate fitted image size (ContentScale.Fit behavior)
+                                            val fittedWidth: Float
+                                            val fittedHeight: Float
+                                            if (imageAspectRatio > viewAspectRatio) {
+                                                // Image is wider - fits to width
+                                                fittedWidth = viewSize.width.toFloat()
+                                                fittedHeight = fittedWidth / imageAspectRatio
+                                            } else {
+                                                // Image is taller - fits to height
+                                                fittedHeight = viewSize.height.toFloat()
+                                                fittedWidth = fittedHeight * imageAspectRatio
+                                            }
+
+                                            // Calculate scaled dimensions
+                                            val scaledWidth = fittedWidth * newScale
+                                            val scaledHeight = fittedHeight * newScale
+
+                                            val borderPxX = 130.dp.toPx() // left/right - allow 10px PAST edge
+                                            val borderPxY = 330.dp.toPx() // top/bottom - allow 15px PAST edge
+
+                                            val maxOffsetX = if (scaledWidth > viewSize.width) {
+                                                ((scaledWidth - viewSize.width) / 2f + borderPxX)
+                                            } else if (fittedWidth < viewSize.width) {
+                                                0f
+                                            } else {
+                                                0f
+                                            }.coerceAtLeast(0f)
+
+                                            val maxOffsetY = if (scaledHeight > viewSize.height) {
+                                                ((scaledHeight - viewSize.height) / 2f + borderPxY)
+                                            } else if (fittedHeight < viewSize.height) {
+                                                0f
+                                            } else {
+                                                0f
+                                            }.coerceAtLeast(0f)
+
+                                            // Apply constraints
+                                            offset = Offset(
+                                                newOffsetX.coerceIn(-maxOffsetX, maxOffsetX),
+                                                newOffsetY.coerceIn(-maxOffsetY, maxOffsetY)
+                                            )
+                                        } else {
+                                            offset = Offset(newOffsetX, newOffsetY)
+                                        }
 
                                         scale = newScale
+                                        // targetScale = newScale  // REMOVED - Don't override preset zoom
 
                                         event.changes.forEach {
                                             if (it.positionChanged()) {
@@ -286,59 +514,13 @@ fun SchoolMap() {
                         } while (!canceled && event.changes.any { it.pressed })
 
                         isInteracting = false
-
-                        if (!pastTouchSlop) {
-                            // Tap logic
-                            val tapOffset = down.position
-                            val imageIntrinsicSize = painter.intrinsicSize
-                            if (viewSize != IntSize.Zero && imageIntrinsicSize != Size.Zero) {
-                                val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f)
-                                val tapOnFitImage =
-                                    viewCenter + (tapOffset - viewCenter - offset) / scale
-
-                                val viewAspectRatio =
-                                    viewSize.width.toFloat() / viewSize.height.toFloat()
-                                val imageAspectRatio =
-                                    imageIntrinsicSize.width / imageIntrinsicSize.height
-                                val scaledImageWidth: Float
-                                val scaledImageHeight: Float
-                                if (imageAspectRatio > viewAspectRatio) {
-                                    scaledImageWidth = viewSize.width.toFloat()
-                                    scaledImageHeight = scaledImageWidth / imageAspectRatio
-                                } else {
-                                    scaledImageHeight = viewSize.height.toFloat()
-                                    scaledImageWidth = scaledImageHeight * imageAspectRatio
-                                }
-                                val imageOffsetX = (viewSize.width - scaledImageWidth) / 2f
-                                val imageOffsetY = (viewSize.height - scaledImageHeight) / 2f
-                                val imageRectInView = Rect(
-                                    left = imageOffsetX,
-                                    top = imageOffsetY,
-                                    right = imageOffsetX + scaledImageWidth,
-                                    bottom = imageOffsetY + scaledImageHeight
-                                )
-
-                                if (imageRectInView.contains(tapOnFitImage)) {
-                                    val tapOnScaledImage = tapOnFitImage - imageRectInView.topLeft
-                                    val imageX =
-                                        (tapOnScaledImage.x / imageRectInView.width) * imageIntrinsicSize.width
-                                    val imageY =
-                                        (tapOnScaledImage.y / imageRectInView.height) * imageIntrinsicSize.height
-                                    val tappedImagePoint = Offset(imageX, imageY)
-                                    val tappedRegion = tappableRegions.find { it.rect.contains(tappedImagePoint) }
-                                    if (tappedRegion != null) {
-                                        selectedRegion = tappedRegion
-                                        dashboardRegion = tappedRegion
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
         ) {
             Image(
                 painter = painter,
                 contentDescription = "Campus Map",
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer(
@@ -348,81 +530,103 @@ fun SchoolMap() {
                         translationY = offset.y
                     )
             )
-            if (dashboardRegion != null && viewSize != IntSize.Zero) {
+
+            // Red "You are here" pin at actual user location
+            if (viewSize != IntSize.Zero) {
                 val mainEntranceRegion = tappableRegions.find { it.name == "Main Entrance" }
                 if (mainEntranceRegion != null) {
                     val imageIntrinsicSize = painter.intrinsicSize
-                    if (imageIntrinsicSize == Size.Zero) return@Box
-
-                    val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
-                    val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
-                    val scaledImageWidth: Float
-                    val scaledImageHeight: Float
-                    if (imageAspectRatio > viewAspectRatio) {
-                        scaledImageWidth = viewSize.width.toFloat()
-                        scaledImageHeight = scaledImageWidth / imageAspectRatio
-                    } else {
-                        scaledImageHeight = viewSize.height.toFloat()
-                        scaledImageWidth = scaledImageHeight * imageAspectRatio
-                    }
-                    val imageOffsetX = (viewSize.width - scaledImageWidth) / 2f
-                    val imageOffsetY = (viewSize.height - scaledImageHeight) / 2f
-                    val imageRectInView = Rect(
-                        left = imageOffsetX, top = imageOffsetY,
-                        right = imageOffsetX + scaledImageWidth, bottom = imageOffsetY + scaledImageHeight
-                    )
-
-                    val targetCenterOnImage = mainEntranceRegion.rect.center
-                    val targetCenterInFitImage = Offset(
-                        x = imageRectInView.left + (targetCenterOnImage.x / imageIntrinsicSize.width) * imageRectInView.width,
-                        y = imageRectInView.top + (targetCenterOnImage.y / imageIntrinsicSize.height) * imageRectInView.height
-                    )
-
-                    val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f)
-                    val pinScreenPosition = viewCenter + (targetCenterInFitImage - viewCenter) * scale + offset
-
-                    val pinAlpha = if (isInteracting) 0.5f else 1f
-
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .graphicsLayer {
-                                translationX = pinScreenPosition.x - size.width / 2f
-                                translationY = pinScreenPosition.y - size.height
-                                alpha = pinAlpha
-                            },
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "You are here",
-                            color = Color.Red,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyLarge
+                    if (imageIntrinsicSize != Size.Zero) {
+                        val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
+                        val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
+                        val scaledImageWidth: Float
+                        val scaledImageHeight: Float
+                        if (imageAspectRatio > viewAspectRatio) {
+                            scaledImageWidth = viewSize.width.toFloat()
+                            scaledImageHeight = scaledImageWidth / imageAspectRatio
+                        } else {
+                            scaledImageHeight = viewSize.height.toFloat()
+                            scaledImageWidth = scaledImageHeight * imageAspectRatio
+                        }
+                        val imageOffsetX = (viewSize.width - scaledImageWidth) / 2f
+                        val imageOffsetY = (viewSize.height - scaledImageHeight) / 2f
+                        val imageRectInView = Rect(
+                            left = imageOffsetX, top = imageOffsetY,
+                            right = imageOffsetX + scaledImageWidth, bottom = imageOffsetY + scaledImageHeight
                         )
-                        Icon(
-                            imageVector = Icons.Filled.LocationOn,
-                            contentDescription = "You are here",
-                            tint = Color.Red,
-                            modifier = Modifier.size(40.dp)
+
+                        val targetCenterOnImage = mainEntranceRegion.rect.center
+                        val targetCenterInFitImage = Offset(
+                            x = imageRectInView.left + (targetCenterOnImage.x / imageIntrinsicSize.width) * imageRectInView.width,
+                            y = imageRectInView.top + (targetCenterOnImage.y / imageIntrinsicSize.height) * imageRectInView.height
                         )
+
+                        val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f)
+                        val pinScreenPosition = viewCenter + (targetCenterInFitImage - viewCenter) * scale + offset
+
+                        val pinAlpha = if (isInteracting) 0.5f else 1f
+
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .graphicsLayer {
+                                    translationX = pinScreenPosition.x - size.width / 2f
+                                    translationY = pinScreenPosition.y - size.height
+                                    alpha = pinAlpha
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "You are here",
+                                color = Color.Red,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            Icon(
+                                imageVector = Icons.Filled.LocationOn,
+                                contentDescription = "You are here",
+                                tint = Color.Red,
+                                modifier = Modifier.size(60.dp)
+                            )
+                        }
                     }
                 }
             }
+
+            // Blue pin at screen center (where user is looking) - NO TEXT
+            Icon(
+                imageVector = Icons.Filled.LocationOn,
+                contentDescription = "Current view center",
+                tint = Color.Blue,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(80.dp)
+                    .graphicsLayer {
+                        alpha = if (isInteracting) 0.7f else 1f
+                    }
+            )
         }
 
-        // Dashboard overlaid at the bottom
-        dashboardRegion?.let {
+        // Dashboard ALWAYS visible at the bottom - shows last detected region
+        if (dashboardRegion != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
             ) {
                 LocationDashboard(
-                    region = it,
+                    region = dashboardRegion!!,
                     isExpanded = isDashboardExpanded,
                     onToggleExpand = { isDashboardExpanded = !isDashboardExpanded }
                 )
             }
         }
+// Zoom controls overlay at top right
+        ZoomControls(
+            currentZoom = scale,
+            onZoomChange = { newZoom ->
+                targetScale = newZoom
+            },
+            modifier = Modifier.align(Alignment.TopEnd)
+        )
     }
 }
-
