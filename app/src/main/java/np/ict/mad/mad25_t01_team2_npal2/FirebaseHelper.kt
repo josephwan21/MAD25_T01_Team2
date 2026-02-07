@@ -270,15 +270,21 @@ class FirebaseHelper{
 
 
 
-    suspend fun saveNotification(userId: String, n: InAppNotification): Boolean {
+    suspend fun saveNotificationIfMissing(
+        userId: String,
+        n: InAppNotification
+    ): Boolean {
         return try {
-            FirebaseFirestore.getInstance()
+            val docRef = FirebaseFirestore.getInstance()
                 .collection("users")
                 .document(userId)
                 .collection("notifications")
-                .document(n.id)  //
-                .set(n)
-                .await()
+                .document(n.id) // n.id must be deterministic
+
+            val existing = docRef.get().await()
+            if (existing.exists()) return true   // ✅ DO NOT overwrite
+
+            docRef.set(n).await()
             true
         } catch (e: Exception) {
             Log.e("FirebaseHelper", "Save notification failed", e)

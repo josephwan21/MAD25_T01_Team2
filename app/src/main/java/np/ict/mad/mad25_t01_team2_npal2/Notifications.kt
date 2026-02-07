@@ -82,12 +82,15 @@ object NotificationCenter {
             isRead = false
         )
 
+
+
+
         if (_notifications.value.any { it.id == key }) return
 
         _notifications.value = listOf(n) + _notifications.value
 
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            firebaseHelper.saveNotification(userId, n)
+            firebaseHelper.saveNotificationIfMissing(userId, n)
         }
     }
 
@@ -134,6 +137,16 @@ fun timeAgo(timestamp: Long): String {
     }
 }
 
+fun cleanStartsMessage(msg: String): String {
+    return msg
+        .removePrefix("Starts in 1 hour • ")
+        .removePrefix("Starts in 1 hour · ")
+        .removePrefix("Starts in 1 hour - ")
+        .removePrefix("Starts in 1 hour ")
+        .trim()
+}
+
+
 /* -------------------- SCREEN -------------------- */
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,17 +158,23 @@ fun NotificationsScreen(
 ) {
     val all by NotificationCenter.notifications.collectAsState()
     val scope = rememberCoroutineScope()
-    val todayStart = startOfTodayMillis()
-
-    // Load from Firebase once
     LaunchedEffect(userId) {
         val remote = firebaseHelper.getNotifications(userId)
         NotificationCenter.setAll(remote)
     }
 
-    val todayNotifications = all
-        .filter { it.userId == userId && it.timestamp >= todayStart }
+    val todayStart = startOfTodayMillis()
+    val yesterdayStart = todayStart - 24L * 60L * 60L * 1000L
+
+    val userNotifications = all
+        .filter { it.userId == userId }
         .sortedByDescending { it.timestamp }
+
+    val todayList = userNotifications.filter { it.timestamp >= todayStart }
+    val yesterdayList = userNotifications.filter { it.timestamp in yesterdayStart until todayStart }
+    val earlierList = userNotifications.filter { it.timestamp < yesterdayStart }
+
+
 
     Scaffold(
         topBar = {
@@ -186,17 +205,45 @@ fun NotificationsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .fillMaxSize()
         ) {
-            if (todayNotifications.isEmpty()) {
-                Text("No notifications today")
+            if (userNotifications.isEmpty()) {
+                Text("No notifications")
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(todayNotifications, key = { it.id }) { n ->
-                        NotificationBubble(n)
+
+                    if (todayList.isNotEmpty()) {
+                        item {
+                            Text("Today", style = MaterialTheme.typography.labelLarge)
+                        }
+                        items(todayList, key = { it.id }) { n ->
+                            NotificationBubble(n, showStartsLabel = true)
+                        }
+
+                    }
+
+                    if (yesterdayList.isNotEmpty()) {
+                        item {
+                            Text("Yesterday", style = MaterialTheme.typography.labelLarge)
+                        }
+                        items(yesterdayList, key = { it.id }) { n ->
+                            NotificationBubble(n, showStartsLabel = false)
+                        }
+
+                    }
+
+                    if (earlierList.isNotEmpty()) {
+                        item {
+                            Text("Earlier", style = MaterialTheme.typography.labelLarge)
+                        }
+                        items(earlierList, key = { it.id }) { n ->
+                            NotificationBubble(n, showStartsLabel = false)
+                        }
+
                     }
                 }
             }
+
         }
     }
 }
@@ -204,7 +251,7 @@ fun NotificationsScreen(
 /* -------------------- UI -------------------- */
 
 @Composable
-private fun NotificationBubble(n: InAppNotification) {
+private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
     val bg = if (n.isRead)
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     else
@@ -236,10 +283,24 @@ private fun NotificationBubble(n: InAppNotification) {
 
             Spacer(Modifier.height(2.dp))
 
+            val cleaned = cleanStartsMessage(n.message)
+
             Text(
-                text = n.message,
+                text = if (showStartsLabel) "Starts in 1 hour • $cleaned" else cleaned,
                 style = MaterialTheme.typography.bodyMedium
             )
+
         }
     }
+
+
+}
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)
+    )
 }
