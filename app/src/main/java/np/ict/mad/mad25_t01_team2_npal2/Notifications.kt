@@ -68,7 +68,9 @@ object NotificationCenter {
         userId: String,
         title: String,
         message: String,
-        timestamp: Long = System.currentTimeMillis()
+        timestamp: Long = System.currentTimeMillis(),
+        taskCategory: String? = null
+
     ) {
         if (pushedKeys.contains(key)) return
         pushedKeys.add(key)
@@ -80,7 +82,8 @@ object NotificationCenter {
             title = title,
             message = message,
             timestamp = timestamp,
-            isRead = false
+            isRead = false,
+            taskCategory = taskCategory
         )
 
 
@@ -286,12 +289,23 @@ private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
             .clip(RoundedCornerShape(14.dp))
             .background(bg)
             .clickable { NotificationCenter.markRead(n.id) }
-            .padding(12.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(RoundedCornerShape(50))
+                .background(categoryDotColor(n.taskCategory))
+        )
+
+        Spacer(Modifier.width(10.dp))
+
         Column(Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = n.title,
@@ -300,24 +314,23 @@ private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
                 )
                 Text(
                     text = timeAgo(n.timestamp),
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(Modifier.height(2.dp))
 
-            val cleaned = cleanStartsMessage(n.message)
-
             Text(
-                text = if (showStartsLabel) "Starts in 1 hour • $cleaned" else cleaned,
-                style = MaterialTheme.typography.bodyMedium
+                text = if (showStartsLabel) "Starts in 1 hour • ${n.message}" else n.message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
         }
     }
-
-
 }
+
+
 @Composable
 private fun SectionHeader(text: String) {
     Text(
@@ -326,4 +339,14 @@ private fun SectionHeader(text: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)
     )
+}
+@Composable
+private fun categoryDotColor(taskCategory: String?): Color {
+    return when (taskCategory) {
+        "CLASS" -> MaterialTheme.colorScheme.primary
+        "EXAM" -> MaterialTheme.colorScheme.error
+        "CCA" -> MaterialTheme.colorScheme.tertiary
+        "PERSONAL" -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.outline
+    }
 }

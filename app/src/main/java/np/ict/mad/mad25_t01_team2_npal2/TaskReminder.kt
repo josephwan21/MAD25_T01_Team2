@@ -31,7 +31,9 @@ object TaskReminder {
                     userId = userId,
                     title = task.title,
                     message = "${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
-                    timestamp = startMillis
+                    timestamp = startMillis,
+                    taskCategory = task.category
+
                 )
             }
         }
