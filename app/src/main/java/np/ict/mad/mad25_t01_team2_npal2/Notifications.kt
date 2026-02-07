@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -173,6 +174,7 @@ fun NotificationsScreen(
     val todayList = userNotifications.filter { it.timestamp >= todayStart }
     val yesterdayList = userNotifications.filter { it.timestamp in yesterdayStart until todayStart }
     val earlierList = userNotifications.filter { it.timestamp < yesterdayStart }
+    var showEarlier by rememberSaveable { mutableStateOf(false) }
 
 
 
@@ -233,14 +235,35 @@ fun NotificationsScreen(
                     }
 
                     if (earlierList.isNotEmpty()) {
+
+                        // Header row with arrow
                         item {
-                            Text("Earlier", style = MaterialTheme.typography.labelLarge)
-                        }
-                        items(earlierList, key = { it.id }) { n ->
-                            NotificationBubble(n, showStartsLabel = false)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showEarlier = !showEarlier }
+                                    .padding(top = 8.dp, bottom = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Earlier", style = MaterialTheme.typography.labelLarge)
+
+                                Text(
+                                    text = if (showEarlier) "Hide" else "Show",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
 
+                        // Only show list when expanded
+                        if (showEarlier) {
+                            items(earlierList, key = { it.id }) { n ->
+                                NotificationBubble(n, showStartsLabel = false)
+                            }
+                        }
                     }
+
                 }
             }
 
