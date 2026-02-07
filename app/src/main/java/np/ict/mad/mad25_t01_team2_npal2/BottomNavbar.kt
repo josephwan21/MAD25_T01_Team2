@@ -92,12 +92,13 @@ fun MAD25_T01_Team2_NPAL2App(
 
             if (showNotifications) {
                 NotificationsScreen(
+                    firebaseHelper = firebaseHelper,
                     userId = currentUserId,
-                    onBack = { showNotifications = false },
-                    modifier = Modifier.padding(innerPadding)
+                    onBack = { showNotifications = false }
                 )
                 return@Scaffold
             }
+
             val contentModifier = Modifier.padding(innerPadding)
             when (currentDestination) {
                 AppDestinations.HOME -> HomeScreenContent(

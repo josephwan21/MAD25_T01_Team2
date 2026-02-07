@@ -100,53 +100,54 @@ fun NotificationSettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier
 ) {
-
-    Column(modifier = modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("Notification Settings") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-            }
-        )
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
     val context = LocalContext.current
-    var enabled by remember {
-        mutableStateOf(isNotificationsEnabled(context))
-    }
+    var enabled by rememberSaveable { mutableStateOf(isNotificationsEnabled(context)) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Notifications",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Enable notifications")
-            Switch(
-                checked = enabled,
-                onCheckedChange = {
-                    enabled = it
-                    setNotificationsEnabled(context, it)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Notification Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
                 }
             )
         }
+    ) { innerPadding ->
+
+        Column(
+            modifier = modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxSize()
+        ) {
+            Text(
+                text = "Notifications",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Enable notifications")
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        enabled = it
+                        setNotificationsEnabled(context, it)
+                    }
+                )
+            }
+        }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

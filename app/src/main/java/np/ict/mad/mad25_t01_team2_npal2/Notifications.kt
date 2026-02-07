@@ -1,6 +1,8 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,56 +11,93 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import java.util.UUID
 
+/* -------------------- DATA -------------------- */
+
+enum class NotificationKind {
+    GENERIC,
+    OVERDUE
+}
 
 data class InAppNotification(
     val id: String = "",
+    val key: String = "",
     val userId: String = "",
     val title: String = "",
     val message: String = "",
     val timestamp: Long = System.currentTimeMillis(),
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val kind: NotificationKind = NotificationKind.GENERIC,
+    val taskCategory: String? = null
 )
 
-fun todayYMD(): String {
-    return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-}
+
+/* -------------------- CENTER -------------------- */
 
 object NotificationCenter {
 
-    private val _notifications =
-        MutableStateFlow<List<InAppNotification>>(emptyList())
-
+    private val _notifications = MutableStateFlow<List<InAppNotification>>(emptyList())
     val notifications: StateFlow<List<InAppNotification>> = _notifications
 
     private val pushedKeys = mutableSetOf<String>()
 
-    fun push(context: Context, userId: String, title: String, message: String) {
-        if (!isNotificationsEnabled(context)) return
-
-        val notification = InAppNotification(
-            id = UUID.randomUUID().toString(),
-            userId = userId,
-            title = title,
-            message = message
-        )
-        _notifications.value = listOf(notification) + _notifications.value
+    fun setAll(list: List<InAppNotification>) {
+        _notifications.value = list
+        pushedKeys.clear()
+        pushedKeys.addAll(list.mapNotNull { it.key.ifBlank { null } })
     }
 
-    fun pushOnce(context: Context, key: String, userId: String, title: String, message: String) {
+
+    fun pushOnce(
+        context: Context,
+        firebaseHelper: FirebaseHelper,
+        key: String,
+        userId: String,
+        title: String,
+        message: String,
+        timestamp: Long = System.currentTimeMillis()
+    ) {
         if (pushedKeys.contains(key)) return
         pushedKeys.add(key)
-        push(context, userId, title, message)
+
+        val n = InAppNotification(
+            id = key,
+            key = key,
+            userId = userId,
+            title = title,
+            message = message,
+            timestamp = timestamp,
+            isRead = false
+        )
+
+
+
+
+        if (_notifications.value.any { it.id == key }) return
+
+        _notifications.value = listOf(n) + _notifications.value
+
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            firebaseHelper.saveNotificationIfMissing(userId, n)
+        }
+    }
+
+    fun markRead(id: String) {
+        _notifications.value = _notifications.value.map {
+            if (it.id == id) it.copy(isRead = true) else it
+        }
     }
 
     fun markAllRead(userId: String) {
@@ -68,21 +107,74 @@ object NotificationCenter {
     }
 
     fun unreadCount(userId: String): Int {
-        return _notifications.value.count {
-            it.userId == userId && !it.isRead
-        }
+        return _notifications.value.count { it.userId == userId && !it.isRead }
     }
 }
+
+/* -------------------- HELPERS -------------------- */
+
+fun startOfTodayMillis(): Long {
+    return Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+}
+
+fun timeAgo(timestamp: Long): String {
+    val diff = (System.currentTimeMillis() - timestamp).coerceAtLeast(0)
+
+    val seconds = diff / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+
+    return when {
+        seconds < 60 -> "Just now"
+        minutes < 60 -> "${minutes}m ago"
+        hours < 24 -> "${hours}h ago"
+        else -> SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(timestamp))
+    }
+}
+
+fun cleanStartsMessage(msg: String): String {
+    return msg
+        .removePrefix("Starts in 1 hour • ")
+        .removePrefix("Starts in 1 hour · ")
+        .removePrefix("Starts in 1 hour - ")
+        .removePrefix("Starts in 1 hour ")
+        .trim()
+}
+
+
+/* -------------------- SCREEN -------------------- */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
+    firebaseHelper: FirebaseHelper,
     userId: String,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    onBack: () -> Unit
 ) {
     val all by NotificationCenter.notifications.collectAsState()
-    val notifications = all.filter { it.userId == userId }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(userId) {
+        val remote = firebaseHelper.getNotifications(userId)
+        NotificationCenter.setAll(remote)
+    }
+
+    val todayStart = startOfTodayMillis()
+    val yesterdayStart = todayStart - 24L * 60L * 60L * 1000L
+
+    val userNotifications = all
+        .filter { it.userId == userId }
+        .sortedByDescending { it.timestamp }
+
+    val todayList = userNotifications.filter { it.timestamp >= todayStart }
+    val yesterdayList = userNotifications.filter { it.timestamp in yesterdayStart until todayStart }
+    val earlierList = userNotifications.filter { it.timestamp < yesterdayStart }
+
+
 
     Scaffold(
         topBar = {
@@ -90,14 +182,16 @@ fun NotificationsScreen(
                 title = { Text("Notifications") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    TextButton(onClick = { NotificationCenter.markAllRead(userId) }) {
+                    TextButton(onClick = {
+                        NotificationCenter.markAllRead(userId)
+                        scope.launch {
+                            firebaseHelper.markAllNotificationsRead(userId)
+                        }
+                    }) {
                         Text("Mark all read")
                     }
                 }
@@ -106,66 +200,107 @@ fun NotificationsScreen(
     ) { innerPadding ->
 
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .fillMaxSize()
         ) {
-
-            if (notifications.isEmpty()) {
-                Text(
-                    text = "No notifications",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+            if (userNotifications.isEmpty()) {
+                Text("No notifications")
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(notifications) { notification ->
 
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor =
-                                    if (notification.isRead)
-                                        MaterialTheme.colorScheme.surface
-                                    else
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp)
-                            ) {
-                                Text(
-                                    text = notification.title,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Text(
-                                    text = notification.message,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
+                    if (todayList.isNotEmpty()) {
+                        item {
+                            Text("Today", style = MaterialTheme.typography.labelLarge)
                         }
+                        items(todayList, key = { it.id }) { n ->
+                            NotificationBubble(n, showStartsLabel = true)
+                        }
+
+                    }
+
+                    if (yesterdayList.isNotEmpty()) {
+                        item {
+                            Text("Yesterday", style = MaterialTheme.typography.labelLarge)
+                        }
+                        items(yesterdayList, key = { it.id }) { n ->
+                            NotificationBubble(n, showStartsLabel = false)
+                        }
+
+                    }
+
+                    if (earlierList.isNotEmpty()) {
+                        item {
+                            Text("Earlier", style = MaterialTheme.typography.labelLarge)
+                        }
+                        items(earlierList, key = { it.id }) { n ->
+                            NotificationBubble(n, showStartsLabel = false)
+                        }
+
                     }
                 }
             }
+
         }
     }
 }
 
-fun isNotificationsEnabled(context: Context): Boolean {
-    val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-    return prefs.getBoolean("notifications_enabled", true)
-}
+/* -------------------- UI -------------------- */
 
-fun setNotificationsEnabled(context: Context, enabled: Boolean) {
-    val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-    prefs.edit().putBoolean("notifications_enabled", enabled).apply()
-}
+@Composable
+private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
+    val bg = if (n.isRead)
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    else
+        MaterialTheme.colorScheme.surfaceVariant
 
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(bg)
+            .clickable { NotificationCenter.markRead(n.id) }
+            .padding(12.dp)
+    ) {
+        Column(Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = n.title,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = timeAgo(n.timestamp),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            Spacer(Modifier.height(2.dp))
+
+            val cleaned = cleanStartsMessage(n.message)
+
+            Text(
+                text = if (showStartsLabel) "Starts in 1 hour • $cleaned" else cleaned,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+        }
+    }
+
+
+}
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)
+    )
+}

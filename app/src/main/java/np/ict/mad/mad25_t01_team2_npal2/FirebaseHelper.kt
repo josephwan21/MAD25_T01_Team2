@@ -267,4 +267,71 @@ class FirebaseHelper{
             false
         }
     }
+
+
+
+    suspend fun saveNotificationIfMissing(
+        userId: String,
+        n: InAppNotification
+    ): Boolean {
+        return try {
+            val docRef = FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .collection("notifications")
+                .document(n.id) // n.id must be deterministic
+
+            val existing = docRef.get().await()
+            if (existing.exists()) return true   // ✅ DO NOT overwrite
+
+            docRef.set(n).await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Save notification failed", e)
+            false
+        }
+    }
+
+    suspend fun getNotifications(userId: String, limit: Long = 50): List<InAppNotification> {
+        return try {
+            val snap = FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .collection("notifications")
+                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(limit)
+                .get()
+                .await()
+
+            snap.documents.mapNotNull { it.toObject(InAppNotification::class.java) }
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Get notifications failed", e)
+            emptyList()
+        }
+    }
+
+    suspend fun markAllNotificationsRead(userId: String): Boolean {
+        return try {
+            val db = FirebaseFirestore.getInstance()
+            val snap = db.collection("users")
+                .document(userId)
+                .collection("notifications")
+                .get()
+                .await()
+
+            val batch = db.batch()
+            snap.documents.forEach { doc ->
+                batch.update(doc.reference, "isRead", true)
+
+            }
+            batch.commit().await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Mark all notifications read failed", e)
+            false
+        }
+    }
+
+
 }
+
