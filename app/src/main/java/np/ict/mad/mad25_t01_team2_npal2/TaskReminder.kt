@@ -13,7 +13,7 @@ object TaskReminder {
         tasks: List<Task>
     ) {
         val now = System.currentTimeMillis()
-        val nextHour = now + 60L * 60L * 1000L
+        val inOneHour = now + 60L * 60L * 1000L
 
         val todayStart = startOfTodayMillis()
         val tomorrowStart = todayStart + 24L * 60L * 60L * 1000L
@@ -21,19 +21,38 @@ object TaskReminder {
         tasks.forEach { task ->
             val startMillis = toMillis(task.date, task.startTime) ?: return@forEach
 
+            // Only today tasks
             if (startMillis !in todayStart until tomorrowStart) return@forEach
 
-            if (startMillis in now..nextHour) {
+            // Past tasks don't need reminders
+            if (startMillis <= now) return@forEach
+
+            val timeRange = "${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}"
+
+            if (startMillis <= inOneHour) {
                 NotificationCenter.pushOnce(
                     context = context,
                     firebaseHelper = firebaseHelper,
-                    key = "starts-${task.id}-${task.date}-${task.startTime}",
+                    // stable key (don’t rely only on task.id)
+                    key = "starts1h-${task.date}-${task.startTime}-${task.endTime}-${task.title}",
                     userId = userId,
                     title = task.title,
-                    message = "${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
-                    timestamp = startMillis,
+                    // store message WITHOUT duplicating label in UI if you want
+                    message = "Starts in 1 hour • $timeRange",
+                    timestamp = now,
                     taskCategory = task.category
-
+                )
+            } else {
+                // Optional: keep this if you want “Today” reminders for all tasks
+                NotificationCenter.pushOnce(
+                    context = context,
+                    firebaseHelper = firebaseHelper,
+                    key = "today-${task.date}-${task.startTime}-${task.endTime}-${task.title}",
+                    userId = userId,
+                    title = task.title,
+                    message = timeRange,
+                    timestamp = now,
+                    taskCategory = task.category
                 )
             }
         }

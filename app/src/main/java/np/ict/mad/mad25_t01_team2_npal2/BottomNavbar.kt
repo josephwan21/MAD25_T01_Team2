@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.delay
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
 import java.text.SimpleDateFormat
 
@@ -56,6 +57,8 @@ import java.text.SimpleDateFormat
 fun MAD25_T01_Team2_NPAL2App(
     onLogout : () -> Unit
 ) {
+
+    val context = LocalContext.current
     val context = LocalContext.current
     var isDarkMode by rememberSaveable {
         mutableStateOf(ThemePrefs.loadDarkMode(context))
@@ -67,6 +70,48 @@ fun MAD25_T01_Team2_NPAL2App(
     val currentUserId = currentUser?.uid ?: ""
     var showNotifications by rememberSaveable { mutableStateOf(false) }
     var settingsSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
+
+
+
+    // THIS is what makes notifications actually get pushed
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isBlank()) return@LaunchedEffect
+
+        while (true) {
+            try {
+                val tasks = firebaseHelper.getTasks(currentUserId)
+                TaskReminder.run(
+                    context = context,
+                    firebaseHelper = firebaseHelper,
+                    userId = currentUserId,
+                    tasks = tasks
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("TaskReminder", "run failed", e)
+            }
+            delay(60_000) // check every minute
+        }
+    }
+    NavigationSuiteScaffold(
+        navigationSuiteItems = {
+            AppDestinations.entries.forEach {
+                item(
+                    icon = {
+                        Icon(
+                            it.icon,
+                            contentDescription = it.label
+                        )
+                    },
+                    label = { Text(it.label) },
+                    selected = it == currentDestination,
+                    onClick = {
+                        showNotifications = false // close notif screen if open
+                        settingsSubScreen = null
+                        currentDestination = it
+                    }
+                )
+            }
+        }
     val colors = if (isDarkMode) darkColorScheme() else lightColorScheme()
     MaterialTheme(
         colorScheme = colors
