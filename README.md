@@ -133,7 +133,6 @@ Allows students to customise app preferences, notification settings, and display
 ### Emily
 
 ### Joseph
-- Biometric Login
 - Settings & Personalization
 
 ### Monisha
