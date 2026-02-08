@@ -254,6 +254,7 @@ fun AccountScreen(
                         scope.launch {
                             val success = firebaseHelper.updateUsername(newUsername)
                             if (success) {
+                                userProfile = firebaseHelper.getUserProfile()
                                 Toast.makeText(context, "Username updated!", Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, "Failed to update username", Toast.LENGTH_LONG).show()
