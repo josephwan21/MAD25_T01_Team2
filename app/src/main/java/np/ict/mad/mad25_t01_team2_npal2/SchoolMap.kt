@@ -1,11 +1,13 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,12 +16,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,18 +54,17 @@ import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-// Logic 1: Define data structures for handling GPS coordinates.
-// Data class for GPS coordinates
 data class GpsCoordinates(val latitude: Double, val longitude: Double)
 
-// Data class for a bounding box using GPS coordinates to define a region.
 data class GpsBoundingBox(val northEast: GpsCoordinates, val southWest: GpsCoordinates) {
     fun contains(coords: GpsCoordinates): Boolean {
         return coords.latitude < northEast.latitude && coords.latitude > southWest.latitude &&
@@ -65,7 +72,6 @@ data class GpsBoundingBox(val northEast: GpsCoordinates, val southWest: GpsCoord
     }
 }
 
-// Updated data class to include GPS information and a description for each region
 data class TappableRegion(
     val name: String,
     val description: String,
@@ -74,20 +80,49 @@ data class TappableRegion(
     val backgroundColor: Color
 )
 
-// Logic 2: Associate GPS bounding boxes with each tappable region.
-// IMPORTANT: These GPS coordinates are placeholders and must be replaced with the
-// actual coordinates for your campus map.
+
+fun Color.darken(factor: Float = 0.7f): Color {
+    return Color(
+        red = this.red * factor,
+        green = this.green * factor,
+        blue = this.blue * factor,
+        alpha = this.alpha
+    )
+}
+
 private val tappableRegions = listOf(
-    TappableRegion("Main Entrance", "The main point of entry to the campus. A common meeting spot.", Rect(973f, 1655f, 1106f, 1783f), GpsBoundingBox(GpsCoordinates(1.378, 103.849), GpsCoordinates(1.376, 103.847)),Color.Gray),
+    TappableRegion("Main Entrance", "The main point of entry to the campus. A common meeting spot.", Rect(973f, 1655f, 1106f, 1783f), GpsBoundingBox(GpsCoordinates(1.378, 103.849), GpsCoordinates(1.376, 103.847)),Color.LightGray),
     TappableRegion("Convention Centre", "A large venue for events, conferences, and exhibitions.", Rect(813f, 1061f, 941f, 1212f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color.Cyan),
     TappableRegion("Atrium/Library", "A quiet place for study and research, with a vast collection of books.", Rect(1100f, 1396f, 1194f, 1542f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFF2196F3)),
     TappableRegion("Field", "An open green space for sports and recreational activities.", Rect(1561f, 1512f, 1856f, 1644f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFF4CAF50)),
-    TappableRegion("Back Entrance", "A secondary entrance providing access to the rear of the campus.", Rect(1779f, 1300f, 1842f, 1365f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color.Gray),
+    TappableRegion("Back Entrance", "A secondary entrance providing access to the rear of the campus.", Rect(1779f, 1300f, 1842f, 1365f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color.LightGray),
     TappableRegion("SIT", "The Singapore Institute of Technology building.", Rect(1167f, 827f, 1257f, 942f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFF44336)),
     TappableRegion("Makan Place", "A popular food court offering a variety of local dishes.", Rect(599f, 873f, 719f, 926f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500)),
     TappableRegion("Food Club", "Another dining option on campus with diverse food choices.", Rect(1251f, 1125f, 1357f, 1178f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500)),
     TappableRegion("Munch", "A cafe perfect for a quick snack or coffee break.", Rect(605f, 1455f, 723f, 1500f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500))
 )
+
+@Composable
+fun StarRatingBar(
+    rating: Int,
+    onRatingChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier) {
+        for (i in 1..5) {
+            IconButton(
+                onClick = { onRatingChanged(i) }
+            ) {
+                Icon(
+                    imageVector = if (i <= rating) Icons.Filled.Star else Icons.Outlined.Star,
+                    contentDescription = "Star $i",
+                    tint = if (i <= rating) Color(0xFFFFD700) else Color.Gray,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun LocationDashboard(
@@ -96,6 +131,26 @@ fun LocationDashboard(
     onToggleExpand: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val firebaseHelper = remember { FirebaseHelper() }
+    val currentUserId = firebaseHelper.getCurrentUserId()
+
+    var userRating by remember { mutableIntStateOf(0) }
+    var feedbackText by remember { mutableStateOf("") }
+    var showSuccessMessage by remember { mutableStateOf(false) }
+    var showErrorMessage by remember { mutableStateOf(false) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var existingFeedback by remember { mutableStateOf<LocationFeedback?>(null) }
+
+    LaunchedEffect(region.name, currentUserId) {
+        if (currentUserId != null) {
+            existingFeedback = firebaseHelper.getUserFeedbackForLocation(currentUserId, region.name)
+            existingFeedback?.let {
+                userRating = it.rating
+                feedbackText = it.comment
+            }
+        }
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -106,70 +161,190 @@ fun LocationDashboard(
                     Modifier.height(225.dp)
                 }
             )
-            .padding(16.dp)
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    awaitFirstDown()
-                    onToggleExpand()
-                }
-            },
+            .padding(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = region.backgroundColor // Apply the region's color
-        )
+            containerColor = region.backgroundColor
+        ),
+        border = BorderStroke(3.dp, region.backgroundColor.darken())
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-            Text(
-                text = region.name,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black // Ensure text is readable
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = region.description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.Black // Ensure text is readable
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown()
+                            onToggleExpand()
+                        }
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = region.name,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = region.description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.Black
+                    )
+                }
+            }
 
             if (isExpanded) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "More details will go here...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.DarkGray
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = if (existingFeedback != null) "Update your rating:" else "Rate this location:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    StarRatingBar(
+                        rating = userRating,
+                        onRatingChanged = {
+                            userRating = it
+                            showSuccessMessage = false
+                            showErrorMessage = false
+                        }
+                    )
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Operating Hours:",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Text(
-                    text = "Monday - Friday: 8:00 AM - 10:00 PM\nSaturday - Sunday: 9:00 AM - 8:00 PM",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black
-                )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = if (existingFeedback != null) "Update your feedback:" else "Leave feedback:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = feedbackText,
+                        onValueChange = {
+                            feedbackText = it
+                            showSuccessMessage = false
+                            showErrorMessage = false
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        placeholder = { Text("Share your experience...") },
+                        maxLines = 5,
+                        enabled = !isSubmitting
+                    )
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Facilities:",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Text(
-                    text = "• WiFi Available\n• Seating Area\n• Restrooms\n• Accessibility Features",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black
-                )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            if (currentUserId != null && userRating > 0) {
+                                isSubmitting = true
+                                kotlinx.coroutines.GlobalScope.launch {
+                                    val success = if (existingFeedback != null) {
+                                        firebaseHelper.updateLocationFeedback(
+                                            existingFeedback!!.id,
+                                            region.name,
+                                            userRating,
+                                            feedbackText
+                                        )
+                                    } else {
+                                        firebaseHelper.saveLocationFeedback(
+                                            currentUserId,
+                                            region.name,
+                                            userRating,
+                                            feedbackText
+                                        )
+                                    }
+
+                                    isSubmitting = false
+                                    if (success) {
+                                        showSuccessMessage = true
+                                        showErrorMessage = false
+                                        existingFeedback = firebaseHelper.getUserFeedbackForLocation(
+                                            currentUserId,
+                                            region.name
+                                        )
+                                    } else {
+                                        showErrorMessage = true
+                                        showSuccessMessage = false
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.align(Alignment.End),
+                        enabled = userRating > 0 && !isSubmitting && currentUserId != null
+                    ) {
+                        Text(if (isSubmitting) "Submitting..." else if (existingFeedback != null) "Update Feedback" else "Submit Feedback")
+                    }
+
+                    if (showSuccessMessage) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (existingFeedback != null) "✓ Feedback updated successfully!" else "✓ Thank you for your feedback!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF4CAF50),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (showErrorMessage) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "✗ Failed to submit feedback. Please try again.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Red,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (currentUserId == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Please log in to submit feedback.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Operating Hours:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "Monday - Friday: 8:00 AM - 10:00 PM\nSaturday - Sunday: 9:00 AM - 8:00 PM",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Black
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Facilities:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "• WiFi Available\n• Seating Area\n• Restrooms\n• Accessibility Features",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Black
+                    )
+                }
             }
         }
     }
@@ -182,10 +357,8 @@ fun ZoomControls(
     onZoomChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Actual zoom levels (what's applied to the image)
     val zoomLevels = listOf(1.5f, 2f, 2.5f, 3f, 3.5f, 4f)
 
-    // Display text (what the user sees)
     val zoomText = when {
         currentZoom <= 1.5f -> "0.5x"
         currentZoom <= 2f -> "1x"
@@ -203,7 +376,6 @@ fun ZoomControls(
             modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Zoom In button
             Text(
                 text = "+",
                 style = MaterialTheme.typography.headlineMedium,
@@ -212,7 +384,6 @@ fun ZoomControls(
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown()
-                            // Find the next higher zoom level
                             val nextZoom = zoomLevels.firstOrNull { it > currentZoom } ?: zoomLevels.first()
                             onZoomChange(nextZoom)
                         }
@@ -220,7 +391,6 @@ fun ZoomControls(
                     .padding(horizontal = 12.dp, vertical = 4.dp)
             )
 
-            // Current zoom level
             Text(
                 text = zoomText,
                 style = MaterialTheme.typography.bodyLarge,
@@ -228,7 +398,6 @@ fun ZoomControls(
                 modifier = Modifier.padding(vertical = 4.dp)
             )
 
-            // Zoom Out button
             Text(
                 text = "−",
                 style = MaterialTheme.typography.headlineMedium,
@@ -237,7 +406,6 @@ fun ZoomControls(
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown()
-                            // Find the next lower zoom level
                             val prevZoom = zoomLevels.lastOrNull { it < currentZoom } ?: zoomLevels.last()
                             onZoomChange(prevZoom)
                         }
@@ -247,6 +415,7 @@ fun ZoomControls(
         }
     }
 }
+
 @Composable
 fun RecenterButton(
     onClick: () -> Unit,
@@ -254,7 +423,10 @@ fun RecenterButton(
 ) {
     Card(
         modifier = modifier.padding(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
     ) {
         Icon(
             imageVector = Icons.Filled.LocationOn,
@@ -268,14 +440,15 @@ fun RecenterButton(
                         onClick()
                     }
                 },
-            tint = MaterialTheme.colorScheme.primary
+            tint = Color.Red
         )
     }
 }
+
 @Composable
 fun SchoolMap() {
     val density = LocalDensity.current
-    var scale by remember { mutableFloatStateOf(2.5f) } // Start at 2.5f = "1.5x" display
+    var scale by remember { mutableFloatStateOf(2.5f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var userInteracted by remember { mutableStateOf(false) }
     var isInteracting by remember { mutableStateOf(false) }
@@ -288,7 +461,6 @@ fun SchoolMap() {
 
     val currentUserLocation = GpsCoordinates(1.377, 103.848)
 
-    // Function to detect region at screen center
     fun detectRegionAtCenter() {
         val imageIntrinsicSize = painter.intrinsicSize
         if (viewSize == IntSize.Zero || imageIntrinsicSize == Size.Zero) return
@@ -330,7 +502,7 @@ fun SchoolMap() {
             }
         }
     }
-    // Function to recenter to user's location
+
     fun recenterToUserLocation() {
         val targetRegion = tappableRegions.find { it.gpsBox.contains(currentUserLocation) }
 
@@ -376,11 +548,10 @@ fun SchoolMap() {
 
             scale = newScale
             offset = newOffset
-            hasMovedFromStart = false // Reset the flag
+            hasMovedFromStart = false
         }
     }
 
-    // Detect region when user stops interacting
     LaunchedEffect(isInteracting) {
         if (!isInteracting && userInteracted) {
             kotlinx.coroutines.delay(300)
@@ -388,7 +559,6 @@ fun SchoolMap() {
         }
     }
 
-    // Initial setup
     LaunchedEffect(viewSize) {
         if (viewSize == IntSize.Zero || userInteracted) return@LaunchedEffect
 
@@ -425,7 +595,7 @@ fun SchoolMap() {
                 y = imageRectInView.top + (targetCenterOnImage.y / imageIntrinsicSize.height) * imageRectInView.height
             )
 
-            val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f) // Changed from 0.6f to 0.5f (true center)
+            val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f)
             val newOffsetUnconstrained = (viewCenter - targetCenterInFitImage) * newScale
             val maxOffsetX = (viewSize.width * newScale - viewSize.width) / 2f
             val maxOffsetY = (viewSize.height * newScale - viewSize.height) / 2f
@@ -439,7 +609,6 @@ fun SchoolMap() {
         }
     }
 
-    // Constrain offset when scale changes (from zoom buttons)
     LaunchedEffect(scale) {
         val imageIntrinsicSize = painter.intrinsicSize
         if (imageIntrinsicSize != Size.Zero && viewSize != IntSize.Zero) {
@@ -527,10 +696,8 @@ fun SchoolMap() {
                                         userInteracted = true
                                         hasMovedFromStart = true
 
-                                        // Update scale with pinch gesture
                                         scale = (scale * zoomChange).coerceIn(1.5f, 4f)
 
-                                        // Update offset with pan gesture
                                         val newOffsetX = offset.x + panChange.x
                                         val newOffsetY = offset.y + panChange.y
 
@@ -608,18 +775,14 @@ fun SchoolMap() {
                     )
             )
 
-// Red "You are here" pin at screen center (follows map position)
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .graphicsLayer {
-                        // Offset the entire column UP by half the icon height
-                        // so the bottom tip of the pin is at center
-                        translationY = -40.dp.toPx() // Half of 80dp pin size
+                        translationY = -40.dp.toPx()
                     },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Text only visible when NOT interacting AND user hasn't moved
                 if (!isInteracting && !hasMovedFromStart) {
                     Text(
                         text = "You are here",
@@ -628,7 +791,6 @@ fun SchoolMap() {
                         style = MaterialTheme.typography.headlineSmall
                     )
                 }
-                // Pin always visible, slightly transparent while panning
                 Icon(
                     imageVector = Icons.Filled.LocationOn,
                     contentDescription = "You are here",
@@ -642,7 +804,6 @@ fun SchoolMap() {
             }
         }
 
-        // Dashboard
         if (dashboardRegion != null) {
             Box(
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -655,7 +816,6 @@ fun SchoolMap() {
             }
         }
 
-        // Zoom controls
         ZoomControls(
             currentZoom = scale,
             onZoomChange = { newZoom ->
@@ -663,7 +823,7 @@ fun SchoolMap() {
             },
             modifier = Modifier.align(Alignment.TopEnd)
         )
-// Recenter button (just above dashboard on right side)
+
         if (hasMovedFromStart) {
             RecenterButton(
                 onClick = { recenterToUserLocation() },
@@ -672,9 +832,9 @@ fun SchoolMap() {
                     .padding(
                         end = 0.dp,
                         bottom = if (isDashboardExpanded)
-                            (viewSize.height * 0.5f + 216f).dp  // 200dp dashboard + 16dp padding
+                            (viewSize.height * 0.7f + 241f).dp
                         else
-                            216.dp  // 200dp dashboard + 16dp padding
+                            241.dp
                     )
             )
         }
