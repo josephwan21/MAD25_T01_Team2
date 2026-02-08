@@ -60,8 +60,15 @@ object NotificationCenter {
         pushedKeys.addAll(list.mapNotNull { it.key.ifBlank { null } })
     }
 
+    fun clearAll(userId: String) {
+        _notifications.value = _notifications.value.filterNot { it.userId == userId }
+        pushedKeys.clear()
+        pushedKeys.addAll(_notifications.value.mapNotNull { it.key.ifBlank { null } })
+    }
+
 
     fun pushOnce(
+
         context: Context,
         firebaseHelper: FirebaseHelper,
         key: String,
@@ -72,6 +79,7 @@ object NotificationCenter {
         taskCategory: String? = null
 
     ) {
+        if (!isNotificationsEnabled(context)) return
         if (pushedKeys.contains(key)) return
         pushedKeys.add(key)
 
@@ -193,12 +201,15 @@ fun NotificationsScreen(
                 actions = {
                     TextButton(onClick = {
                         NotificationCenter.markAllRead(userId)
+                        scope.launch { firebaseHelper.markAllNotificationsRead(userId) }
+                    }) { Text("Mark all read") }
+
+                    TextButton(onClick = {
                         scope.launch {
-                            firebaseHelper.markAllNotificationsRead(userId)
+                            val ok = firebaseHelper.deleteAllNotifications(userId)
+                            if (ok) NotificationCenter.clearAll(userId)
                         }
-                    }) {
-                        Text("Mark all read")
-                    }
+                    }) { Text("Clear") }
                 }
             )
         }
@@ -322,7 +333,7 @@ private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
             Spacer(Modifier.height(2.dp))
 
             Text(
-                text = if (showStartsLabel) "Starts in 1 hour • ${n.message}" else n.message,
+                text = if (showStartsLabel) n.message else cleanStartsMessage(n.message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

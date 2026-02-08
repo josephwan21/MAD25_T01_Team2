@@ -309,6 +309,26 @@ class FirebaseHelper{
             emptyList()
         }
     }
+    suspend fun deleteAllNotifications(userId: String): Boolean {
+        return try {
+            val db = FirebaseFirestore.getInstance()
+            val snap = db.collection("users")
+                .document(userId)
+                .collection("notifications")
+                .get()
+                .await()
+
+            val batch = db.batch()
+            snap.documents.forEach { doc ->
+                batch.delete(doc.reference)
+            }
+            batch.commit().await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Delete all notifications failed", e)
+            false
+        }
+    }
 
     suspend fun markAllNotificationsRead(userId: String): Boolean {
         return try {
