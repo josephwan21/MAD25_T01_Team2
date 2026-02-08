@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -44,6 +46,7 @@ import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -67,23 +70,23 @@ data class TappableRegion(
     val name: String,
     val description: String,
     val rect: Rect,
-    val gpsBox: GpsBoundingBox
+    val gpsBox: GpsBoundingBox,
+    val backgroundColor: Color
 )
-
 
 // Logic 2: Associate GPS bounding boxes with each tappable region.
 // IMPORTANT: These GPS coordinates are placeholders and must be replaced with the
 // actual coordinates for your campus map.
 private val tappableRegions = listOf(
-    TappableRegion("Main Entrance", "The main point of entry to the campus. A common meeting spot.", Rect(973f, 1655f, 1106f, 1783f), GpsBoundingBox(GpsCoordinates(1.378, 103.849), GpsCoordinates(1.376, 103.847))),
-    TappableRegion("Convention Centre", "A large venue for events, conferences, and exhibitions.", Rect(813f, 1061f, 941f, 1212f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0))),
-    TappableRegion("Atrium/Library", "A quiet place for study and research, with a vast collection of books.", Rect(1100f, 1396f, 1194f, 1542f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0))),
-    TappableRegion("Field", "An open green space for sports and recreational activities.", Rect(1561f, 1512f, 1856f, 1644f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0))),
-    TappableRegion("Back Entrance", "A secondary entrance providing access to the rear of the campus.", Rect(1779f, 1300f, 1842f, 1365f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0))),
-    TappableRegion("SIT", "The Singapore Institute of Technology building.", Rect(1167f, 827f, 1257f, 942f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0))),
-    TappableRegion("Makan Place", "A popular food court offering a variety of local dishes.", Rect(599f, 873f, 719f, 926f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0))),
-    TappableRegion("Food Club", "Another dining option on campus with diverse food choices.", Rect(1251f, 1125f, 1357f, 1178f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0))),
-    TappableRegion("Munch", "A cafe perfect for a quick snack or coffee break.", Rect(605f, 1455f, 723f, 1500f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0))),
+    TappableRegion("Main Entrance", "The main point of entry to the campus. A common meeting spot.", Rect(973f, 1655f, 1106f, 1783f), GpsBoundingBox(GpsCoordinates(1.378, 103.849), GpsCoordinates(1.376, 103.847)),Color.Gray),
+    TappableRegion("Convention Centre", "A large venue for events, conferences, and exhibitions.", Rect(813f, 1061f, 941f, 1212f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color.Cyan),
+    TappableRegion("Atrium/Library", "A quiet place for study and research, with a vast collection of books.", Rect(1100f, 1396f, 1194f, 1542f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFF2196F3)),
+    TappableRegion("Field", "An open green space for sports and recreational activities.", Rect(1561f, 1512f, 1856f, 1644f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFF4CAF50)),
+    TappableRegion("Back Entrance", "A secondary entrance providing access to the rear of the campus.", Rect(1779f, 1300f, 1842f, 1365f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color.Gray),
+    TappableRegion("SIT", "The Singapore Institute of Technology building.", Rect(1167f, 827f, 1257f, 942f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFF44336)),
+    TappableRegion("Makan Place", "A popular food court offering a variety of local dishes.", Rect(599f, 873f, 719f, 926f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500)),
+    TappableRegion("Food Club", "Another dining option on campus with diverse food choices.", Rect(1251f, 1125f, 1357f, 1178f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500)),
+    TappableRegion("Munch", "A cafe perfect for a quick snack or coffee break.", Rect(605f, 1455f, 723f, 1500f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500))
 )
 
 @Composable
@@ -98,9 +101,9 @@ fun LocationDashboard(
             .fillMaxWidth()
             .then(
                 if (isExpanded) {
-                    Modifier.fillMaxHeight(0.5f)
+                    Modifier.fillMaxHeight(0.7f)
                 } else {
-                    Modifier.height(140.dp)
+                    Modifier.height(225.dp)
                 }
             )
             .padding(16.dp)
@@ -110,36 +113,68 @@ fun LocationDashboard(
                     onToggleExpand()
                 }
             },
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = region.backgroundColor // Apply the region's color
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
             Text(
                 text = region.name,
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.Black // Ensure text is readable
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = region.description,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.Black // Ensure text is readable
             )
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(16.dp))
-                // Add more content here when expanded
                 Text(
                     text = "More details will go here...",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = Color.DarkGray
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Operating Hours:",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    text = "Monday - Friday: 8:00 AM - 10:00 PM\nSaturday - Sunday: 9:00 AM - 8:00 PM",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Facilities:",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    text = "• WiFi Available\n• Seating Area\n• Restrooms\n• Accessibility Features",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Black
                 )
             }
         }
     }
 }
+
 @SuppressLint("DefaultLocale")
 @Composable
 fun ZoomControls(
@@ -148,16 +183,16 @@ fun ZoomControls(
     modifier: Modifier = Modifier
 ) {
     // Actual zoom levels (what's applied to the image)
-    val zoomLevels = listOf(1.5f, 2f, 2.5f, 3f, 4f)
+    val zoomLevels = listOf(1.5f, 2f, 2.5f, 3f, 3.5f, 4f)
 
     // Display text (what the user sees)
-    val zoomText = when (currentZoom) {
-        1.5f -> "0.5x"
-        2f -> "1x"
-        2.5f -> "1.5x"
-        3f -> "2x"
-        4f -> "3x"
-        else -> String.format("%.1fx", currentZoom / 2f) // Fallback: divide by 2 for display
+    val zoomText = when {
+        currentZoom <= 1.5f -> "0.5x"
+        currentZoom <= 2f -> "1x"
+        currentZoom <= 2.5f -> "1.5x"
+        currentZoom <= 3f -> "2x"
+        currentZoom <= 3.5f -> "2.5x"
+        else -> "3x"
     }
 
     Card(
@@ -177,14 +212,9 @@ fun ZoomControls(
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown()
-                            // Find current index and move to next
-                            val currentIndex = zoomLevels.indexOf(currentZoom)
-                            val nextIndex = if (currentIndex == -1) {
-                                0 // Default to first if not found
-                            } else {
-                                (currentIndex + 1) % zoomLevels.size // Cycle through
-                            }
-                            onZoomChange(zoomLevels[nextIndex])
+                            // Find the next higher zoom level
+                            val nextZoom = zoomLevels.firstOrNull { it > currentZoom } ?: zoomLevels.first()
+                            onZoomChange(nextZoom)
                         }
                     }
                     .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -207,20 +237,9 @@ fun ZoomControls(
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown()
-                            // Find current index and move to previous
-                            val currentIndex = zoomLevels.indexOf(currentZoom)
-                            val prevIndex = when (currentIndex) {
-                                -1 -> {
-                                    0 // Default to first if not found
-                                }
-                                0 -> {
-                                    zoomLevels.size - 1 // Cycle to end
-                                }
-                                else -> {
-                                    currentIndex - 1
-                                }
-                            }
-                            onZoomChange(zoomLevels[prevIndex])
+                            // Find the next lower zoom level
+                            val prevZoom = zoomLevels.lastOrNull { it < currentZoom } ?: zoomLevels.last()
+                            onZoomChange(prevZoom)
                         }
                     }
                     .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -229,10 +248,34 @@ fun ZoomControls(
     }
 }
 @Composable
+fun RecenterButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.padding(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Filled.LocationOn,
+            contentDescription = "Recenter to current location",
+            modifier = Modifier
+                .padding(12.dp)
+                .size(28.dp)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown()
+                        onClick()
+                    }
+                },
+            tint = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+@Composable
 fun SchoolMap() {
     val density = LocalDensity.current
-    var scale by remember { mutableFloatStateOf(2f) }
-    var targetScale by remember { mutableFloatStateOf(2f) }
+    var scale by remember { mutableFloatStateOf(2.5f) } // Start at 2.5f = "1.5x" display
     var offset by remember { mutableStateOf(Offset.Zero) }
     var userInteracted by remember { mutableStateOf(false) }
     var isInteracting by remember { mutableStateOf(false) }
@@ -240,18 +283,17 @@ fun SchoolMap() {
     var dashboardRegion by remember { mutableStateOf<TappableRegion?>(null) }
     var isDashboardExpanded by remember { mutableStateOf(false) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
+    var hasMovedFromStart by remember { mutableStateOf(false) }
     val painter = painterResource(id = R.drawable.campus_map_1)
 
-    val currentUserLocation = GpsCoordinates(1.377, 103.848) // Simulated location for "Main Entrance"
+    val currentUserLocation = GpsCoordinates(1.377, 103.848)
 
     // Function to detect region at screen center
     fun detectRegionAtCenter() {
         val imageIntrinsicSize = painter.intrinsicSize
         if (viewSize == IntSize.Zero || imageIntrinsicSize == Size.Zero) return
 
-        // Offset adjusts with zoom - 10 pixels at scale 1.0, scales proportionally
-        val pinOffset = 10f * scale
-
+        val pinOffset = 3.5f * scale
         val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f + pinOffset)
 
         val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
@@ -274,7 +316,6 @@ fun SchoolMap() {
             bottom = imageOffsetY + scaledImageHeight
         )
 
-        // Transform screen center (adjusted for pin tip) to image coordinates
         val centerPointOnFitImage = viewCenter + (-offset) / scale
 
         if (imageRectInView.contains(centerPointOnFitImage)) {
@@ -284,21 +325,70 @@ fun SchoolMap() {
             val centerImagePoint = Offset(imageX, imageY)
 
             val detectedRegion = tappableRegions.find { it.rect.contains(centerImagePoint) }
-            // Only update if a region is found, otherwise keep the previous one
             if (detectedRegion != null) {
                 dashboardRegion = detectedRegion
             }
+        }
+    }
+    // Function to recenter to user's location
+    fun recenterToUserLocation() {
+        val targetRegion = tappableRegions.find { it.gpsBox.contains(currentUserLocation) }
+
+        if (targetRegion != null) {
+            dashboardRegion = targetRegion
+            val newScale = 2.5f
+
+            val imageIntrinsicSize = painter.intrinsicSize
+            val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
+            val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
+            val scaledImageWidth: Float
+            val scaledImageHeight: Float
+            if (imageAspectRatio > viewAspectRatio) {
+                scaledImageWidth = viewSize.width.toFloat()
+                scaledImageHeight = scaledImageWidth / imageAspectRatio
+            } else {
+                scaledImageHeight = viewSize.height.toFloat()
+                scaledImageWidth = scaledImageHeight * imageAspectRatio
+            }
+            val imageOffsetX = (viewSize.width - scaledImageWidth) / 2f
+            val imageOffsetY = (viewSize.height - scaledImageHeight) / 2f
+            val imageRectInView = Rect(
+                left = imageOffsetX,
+                top = imageOffsetY,
+                right = imageOffsetX + scaledImageWidth,
+                bottom = imageOffsetY + scaledImageHeight
+            )
+
+            val targetCenterOnImage = targetRegion.rect.center
+            val targetCenterInFitImage = Offset(
+                x = imageRectInView.left + (targetCenterOnImage.x / imageIntrinsicSize.width) * imageRectInView.width,
+                y = imageRectInView.top + (targetCenterOnImage.y / imageIntrinsicSize.height) * imageRectInView.height
+            )
+
+            val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f)
+            val newOffsetUnconstrained = (viewCenter - targetCenterInFitImage) * newScale
+            val maxOffsetX = (viewSize.width * newScale - viewSize.width) / 2f
+            val maxOffsetY = (viewSize.height * newScale - viewSize.height) / 2f
+            val newOffset = Offset(
+                newOffsetUnconstrained.x.coerceIn(-maxOffsetX, maxOffsetX),
+                newOffsetUnconstrained.y.coerceIn(-maxOffsetY, maxOffsetY)
+            )
+
+            scale = newScale
+            offset = newOffset
+            hasMovedFromStart = false // Reset the flag
         }
     }
 
     // Detect region when user stops interacting
     LaunchedEffect(isInteracting) {
         if (!isInteracting && userInteracted) {
-            kotlinx.coroutines.delay(300) // Small delay after stopping
+            kotlinx.coroutines.delay(300)
             detectRegionAtCenter()
         }
     }
 
+    // Initial setup
     LaunchedEffect(viewSize) {
         if (viewSize == IntSize.Zero || userInteracted) return@LaunchedEffect
 
@@ -335,7 +425,7 @@ fun SchoolMap() {
                 y = imageRectInView.top + (targetCenterOnImage.y / imageIntrinsicSize.height) * imageRectInView.height
             )
 
-            val viewCenter = Offset(viewSize.width / 2f, viewSize.height * 0.6f)
+            val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f) // Changed from 0.6f to 0.5f (true center)
             val newOffsetUnconstrained = (viewCenter - targetCenterInFitImage) * newScale
             val maxOffsetX = (viewSize.width * newScale - viewSize.width) / 2f
             val maxOffsetY = (viewSize.height * newScale - viewSize.height) / 2f
@@ -348,55 +438,50 @@ fun SchoolMap() {
             offset = newOffset
         }
     }
-    // Animate to target zoom when preset is selected
-// Animate to target zoom when preset is selected
-    LaunchedEffect(targetScale) {
-        if (targetScale != scale && !isInteracting) {
-            scale = targetScale
-            // Recalculate offset constraints for new scale
-            val imageIntrinsicSize = painter.intrinsicSize
-            if (imageIntrinsicSize != Size.Zero && viewSize != IntSize.Zero) {
-                val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
-                val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
 
-                val fittedWidth: Float
-                val fittedHeight: Float
-                if (imageAspectRatio > viewAspectRatio) {
-                    fittedWidth = viewSize.width.toFloat()
-                    fittedHeight = fittedWidth / imageAspectRatio
-                } else {
-                    fittedHeight = viewSize.height.toFloat()
-                    fittedWidth = fittedHeight * imageAspectRatio
-                }
+    // Constrain offset when scale changes (from zoom buttons)
+    LaunchedEffect(scale) {
+        val imageIntrinsicSize = painter.intrinsicSize
+        if (imageIntrinsicSize != Size.Zero && viewSize != IntSize.Zero) {
+            val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
+            val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
 
-                val scaledWidth = fittedWidth * scale
-                val scaledHeight = fittedHeight * scale
-
-                val borderPxX = with(density) { 10.dp.toPx() }
-                val borderPxY = with(density) { 15.dp.toPx() }
-
-                val maxOffsetX = if (scaledWidth > viewSize.width) {
-                    ((scaledWidth - viewSize.width) / 2f + borderPxX)
-                } else if (fittedWidth < viewSize.width) {
-                    0f
-                } else {
-                    0f
-                }.coerceAtLeast(0f)
-
-                val maxOffsetY = if (scaledHeight > viewSize.height) {
-                    ((scaledHeight - viewSize.height) / 2f + borderPxY)
-                } else if (fittedHeight < viewSize.height) {
-                    0f
-                } else {
-                    0f
-                }.coerceAtLeast(0f)
-
-                // Constrain current offset to new limits
-                offset = Offset(
-                    offset.x.coerceIn(-maxOffsetX, maxOffsetX),
-                    offset.y.coerceIn(-maxOffsetY, maxOffsetY)
-                )
+            val fittedWidth: Float
+            val fittedHeight: Float
+            if (imageAspectRatio > viewAspectRatio) {
+                fittedWidth = viewSize.width.toFloat()
+                fittedHeight = fittedWidth / imageAspectRatio
+            } else {
+                fittedHeight = viewSize.height.toFloat()
+                fittedWidth = fittedHeight * imageAspectRatio
             }
+
+            val scaledWidth = fittedWidth * scale
+            val scaledHeight = fittedHeight * scale
+
+            val borderPxX = with(density) { 10.dp.toPx() }
+            val borderPxY = with(density) { 15.dp.toPx() }
+
+            val maxOffsetX = if (scaledWidth > viewSize.width) {
+                ((scaledWidth - viewSize.width) / 2f + borderPxX)
+            } else if (fittedWidth < viewSize.width) {
+                0f
+            } else {
+                0f
+            }.coerceAtLeast(0f)
+
+            val maxOffsetY = if (scaledHeight > viewSize.height) {
+                ((scaledHeight - viewSize.height) / 2f + borderPxY)
+            } else if (fittedHeight < viewSize.height) {
+                0f
+            } else {
+                0f
+            }.coerceAtLeast(0f)
+
+            offset = Offset(
+                offset.x.coerceIn(-maxOffsetX, maxOffsetX),
+                offset.y.coerceIn(-maxOffsetY, maxOffsetY)
+            )
         }
     }
 
@@ -404,7 +489,7 @@ fun SchoolMap() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFADD8E6)) // Light blue background
+                .background(Color(0xFFADD8E6))
                 .onSizeChanged { viewSize = it }
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -440,40 +525,36 @@ fun SchoolMap() {
                                     if (lockedToPanZoom || zoomChange != 1f || panChange != Offset.Zero) {
                                         isInteracting = true
                                         userInteracted = true
+                                        hasMovedFromStart = true
 
-                                        // First update the scale - CORRECTED RANGE
-                                        val newScale = (scale * zoomChange).coerceIn(1.5f, 4f)
+                                        // Update scale with pinch gesture
+                                        scale = (scale * zoomChange).coerceIn(1.5f, 4f)
 
-                                        // Calculate what the new offset would be
+                                        // Update offset with pan gesture
                                         val newOffsetX = offset.x + panChange.x
                                         val newOffsetY = offset.y + panChange.y
 
-                                        // Get image intrinsic size to calculate fitted dimensions
                                         val imageIntrinsicSize = painter.intrinsicSize
 
                                         if (imageIntrinsicSize != Size.Zero) {
                                             val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
                                             val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
 
-                                            // Calculate fitted image size (ContentScale.Fit behavior)
                                             val fittedWidth: Float
                                             val fittedHeight: Float
                                             if (imageAspectRatio > viewAspectRatio) {
-                                                // Image is wider - fits to width
                                                 fittedWidth = viewSize.width.toFloat()
                                                 fittedHeight = fittedWidth / imageAspectRatio
                                             } else {
-                                                // Image is taller - fits to height
                                                 fittedHeight = viewSize.height.toFloat()
                                                 fittedWidth = fittedHeight * imageAspectRatio
                                             }
 
-                                            // Calculate scaled dimensions
-                                            val scaledWidth = fittedWidth * newScale
-                                            val scaledHeight = fittedHeight * newScale
+                                            val scaledWidth = fittedWidth * scale
+                                            val scaledHeight = fittedHeight * scale
 
-                                            val borderPxX = 130.dp.toPx() // left/right - allow 10px PAST edge
-                                            val borderPxY = 330.dp.toPx() // top/bottom - allow 15px PAST edge
+                                            val borderPxX = 130.dp.toPx()
+                                            val borderPxY = 330.dp.toPx()
 
                                             val maxOffsetX = if (scaledWidth > viewSize.width) {
                                                 ((scaledWidth - viewSize.width) / 2f + borderPxX)
@@ -491,7 +572,6 @@ fun SchoolMap() {
                                                 0f
                                             }.coerceAtLeast(0f)
 
-                                            // Apply constraints
                                             offset = Offset(
                                                 newOffsetX.coerceIn(-maxOffsetX, maxOffsetX),
                                                 newOffsetY.coerceIn(-maxOffsetY, maxOffsetY)
@@ -499,9 +579,6 @@ fun SchoolMap() {
                                         } else {
                                             offset = Offset(newOffsetX, newOffsetY)
                                         }
-
-                                        scale = newScale
-                                        // targetScale = newScale  // REMOVED - Don't override preset zoom
 
                                         event.changes.forEach {
                                             if (it.positionChanged()) {
@@ -531,87 +608,44 @@ fun SchoolMap() {
                     )
             )
 
-            // Red "You are here" pin at actual user location
-            if (viewSize != IntSize.Zero) {
-                val mainEntranceRegion = tappableRegions.find { it.name == "Main Entrance" }
-                if (mainEntranceRegion != null) {
-                    val imageIntrinsicSize = painter.intrinsicSize
-                    if (imageIntrinsicSize != Size.Zero) {
-                        val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
-                        val imageAspectRatio = imageIntrinsicSize.width / imageIntrinsicSize.height
-                        val scaledImageWidth: Float
-                        val scaledImageHeight: Float
-                        if (imageAspectRatio > viewAspectRatio) {
-                            scaledImageWidth = viewSize.width.toFloat()
-                            scaledImageHeight = scaledImageWidth / imageAspectRatio
-                        } else {
-                            scaledImageHeight = viewSize.height.toFloat()
-                            scaledImageWidth = scaledImageHeight * imageAspectRatio
-                        }
-                        val imageOffsetX = (viewSize.width - scaledImageWidth) / 2f
-                        val imageOffsetY = (viewSize.height - scaledImageHeight) / 2f
-                        val imageRectInView = Rect(
-                            left = imageOffsetX, top = imageOffsetY,
-                            right = imageOffsetX + scaledImageWidth, bottom = imageOffsetY + scaledImageHeight
-                        )
-
-                        val targetCenterOnImage = mainEntranceRegion.rect.center
-                        val targetCenterInFitImage = Offset(
-                            x = imageRectInView.left + (targetCenterOnImage.x / imageIntrinsicSize.width) * imageRectInView.width,
-                            y = imageRectInView.top + (targetCenterOnImage.y / imageIntrinsicSize.height) * imageRectInView.height
-                        )
-
-                        val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f)
-                        val pinScreenPosition = viewCenter + (targetCenterInFitImage - viewCenter) * scale + offset
-
-                        val pinAlpha = if (isInteracting) 0.5f else 1f
-
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .graphicsLayer {
-                                    translationX = pinScreenPosition.x - size.width / 2f
-                                    translationY = pinScreenPosition.y - size.height
-                                    alpha = pinAlpha
-                                },
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "You are here",
-                                color = Color.Red,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                            Icon(
-                                imageVector = Icons.Filled.LocationOn,
-                                contentDescription = "You are here",
-                                tint = Color.Red,
-                                modifier = Modifier.size(60.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Blue pin at screen center (where user is looking) - NO TEXT
-            Icon(
-                imageVector = Icons.Filled.LocationOn,
-                contentDescription = "Current view center",
-                tint = Color.Blue,
+// Red "You are here" pin at screen center (follows map position)
+            Column(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(80.dp)
                     .graphicsLayer {
-                        alpha = if (isInteracting) 0.7f else 1f
-                    }
-            )
+                        // Offset the entire column UP by half the icon height
+                        // so the bottom tip of the pin is at center
+                        translationY = -40.dp.toPx() // Half of 80dp pin size
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Text only visible when NOT interacting AND user hasn't moved
+                if (!isInteracting && !hasMovedFromStart) {
+                    Text(
+                        text = "You are here",
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+                // Pin always visible, slightly transparent while panning
+                Icon(
+                    imageVector = Icons.Filled.LocationOn,
+                    contentDescription = "You are here",
+                    tint = Color.Red,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .graphicsLayer {
+                            alpha = if (isInteracting) 0.7f else 1f
+                        }
+                )
+            }
         }
 
-        // Dashboard ALWAYS visible at the bottom - shows last detected region
+        // Dashboard
         if (dashboardRegion != null) {
             Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 LocationDashboard(
                     region = dashboardRegion!!,
@@ -620,13 +654,29 @@ fun SchoolMap() {
                 )
             }
         }
-// Zoom controls overlay at top right
+
+        // Zoom controls
         ZoomControls(
             currentZoom = scale,
             onZoomChange = { newZoom ->
-                targetScale = newZoom
+                scale = newZoom
             },
             modifier = Modifier.align(Alignment.TopEnd)
         )
+// Recenter button (just above dashboard on right side)
+        if (hasMovedFromStart) {
+            RecenterButton(
+                onClick = { recenterToUserLocation() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(
+                        end = 0.dp,
+                        bottom = if (isDashboardExpanded)
+                            (viewSize.height * 0.5f + 216f).dp  // 200dp dashboard + 16dp padding
+                        else
+                            216.dp  // 200dp dashboard + 16dp padding
+                    )
+            )
+        }
     }
 }
