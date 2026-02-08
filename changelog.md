@@ -1,5 +1,1 @@
-- Enabled pan and zoom functionality for the school map. The `SchoolMap.kt` file was modified to include `detectTransformGestures` within the `pointerInput` modifier. This allows users to pinch to zoom and drag to pan the map. The zoom level is clamped to prevent excessive scaling, and the map's offset is constrained to keep it within view. A `userInteracted` flag was also introduced to ensure that the initial location-based centering and zooming do not interfere with subsequent manual user interactions.
-- **2026-02-07: Restricted Map Panning**
-  Implemented stricter panning limits for the interactive map in `SchoolMap.kt`. The `offset` calculations now ensure that the map content does not pan more than 10 pixels beyond any edge of the viewport. This provides a more controlled panning experience, preventing the map from completely disappearing off-screen during extensive user interaction.
-- **2026-02-07: Fix: Indentation Error in SchoolMap.kt**
-  Corrected an indentation error in the `SchoolMap.kt` file that caused an "Unresolved reference 'event'" compilation error. The code block for calculating panning limits was incorrectly indented, and this has been fixed to ensure proper scope and compilation.
+
