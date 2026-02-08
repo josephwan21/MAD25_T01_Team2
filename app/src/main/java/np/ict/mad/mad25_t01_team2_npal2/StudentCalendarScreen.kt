@@ -9,18 +9,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,22 +28,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Calendar
 
-data class CalendarTask( //
+data class CalendarTask(
     val title: String,
     val time: String,
     val category: TaskCategory
 )
 
-enum class TaskCategory(val label: String) { //used enum class for fixed choices
-    CLASS("Class"),
-    EXAM("Exam"),
-    CCA("CCA"),
-    PERSONAL("Personal")
-}
-
 @Composable
-fun StudentCalendarScreen() {
-    // Month names and days per month
+fun StudentCalendarScreen(
+    firebaseHelper: FirebaseHelper,
+    userId: String
+) {
     val monthNames = listOf(
         "January", "February", "March", "April",
         "May", "June", "July", "August",
@@ -58,13 +51,11 @@ fun StudentCalendarScreen() {
         30, 31, 30, 31
     )
 
-    // Today from system (for highlight + dummy tasks)
     val todayCal = remember { Calendar.getInstance() }
     val todayYear = todayCal.get(Calendar.YEAR)
-    val todayMonth = todayCal.get(Calendar.MONTH)      // 0–11
+    val todayMonth = todayCal.get(Calendar.MONTH)
     val todayDay = todayCal.get(Calendar.DAY_OF_MONTH)
 
-    // Calendar state
     var year by remember { mutableStateOf(todayYear) }
     var monthIndex by remember { mutableStateOf(todayMonth) }
     var selectedDay by remember { mutableStateOf(todayDay) }
@@ -74,85 +65,36 @@ fun StudentCalendarScreen() {
 
     val monthLabel = "${monthNames[monthIndex]}, $year"
 
-    // Dummy tasks on multiple dates in this month
-    val tasksMap: Map<Triple<Int, Int, Int>, List<CalendarTask>> = mapOf(
-        // Today
-        Triple(todayYear, todayMonth, todayDay) to listOf(
-            CalendarTask(
-                title = "Mobile App Development Lecture",
-                time = "9:00 – 11:00 AM",
-                category = TaskCategory.CLASS
-            ),
-            CalendarTask(
-                title = "Database Theory Self-Study",
-                time = "2:00 – 3:30 PM",
-                category = TaskCategory.PERSONAL
-            ),
-            CalendarTask(
-                title ="MAD Stage 1 Presentation",
-                time = "3:00 – 5:30 PM",
-                category = TaskCategory.EXAM
-            ),
-            CalendarTask(
-                title = "DSA Self-Study",
-                time = "6:00 – 7:30 PM",
-                category = TaskCategory.PERSONAL
-            )
+    var allTasks by remember { mutableStateOf<List<Task>>(emptyList()) }
 
+    LaunchedEffect(userId) {
+        allTasks = firebaseHelper.getTasks(userId)
+    }
 
-        ),
+    // Map date -> list of original Firebase Tasks (keeps description)
+    val tasksMap: Map<Triple<Int, Int, Int>, List<Task>> =
+        allTasks
+            .mapNotNull { task ->
+                val ymd = parseYMD(task.date) ?: return@mapNotNull null
+                ymd to task
+            }
+            .groupBy({ it.first }, { it.second })
 
-        Triple(todayYear, todayMonth, 5) to listOf(
-            CalendarTask(
-                title = "MAD Lab Session",
-                time = "1:00 – 3:00 PM",
-                category = TaskCategory.CLASS
-            ),
-            CalendarTask(
-                title = "CCA Committee Meeting",
-                time = "5:00 – 6:00 PM",
-                category = TaskCategory.CCA
-            )
-        ),
+    val tasksForSelectedDay: List<Task> =
+        tasksMap[Triple(year, monthIndex, selectedDay)] ?: emptyList()
 
-        Triple(todayYear, todayMonth, 10) to listOf(
-            CalendarTask(
-                title = "Database Quiz 1",
-                time = "10:00 – 11:00 AM",
-                category = TaskCategory.EXAM
-            )
-        ),
-
-        // 20th of this month
-        Triple(todayYear, todayMonth, 20) to listOf(
-            CalendarTask(
-                title = "Project Group Discussion",
-                time = "3:00 – 4:30 PM",
-                category = TaskCategory.PERSONAL
-            ),
-            CalendarTask(
-                title = "CCA Friendly Match",
-                time = "7:00 – 9:00 PM",
-                category = TaskCategory.CCA
-            )
-        )
-    )
-
-    val tasksForSelectedDay = tasksMap[Triple(year, monthIndex, selectedDay)] ?: emptyList()
+    // Selected task for dialog
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-
-        // Push header a bit down
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Month navigation
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -160,7 +102,6 @@ fun StudentCalendarScreen() {
                 modifier = Modifier
                     .size(40.dp)
                     .clickable {
-                        // previous month
                         if (monthIndex == 0) {
                             monthIndex = 11
                             year -= 1
@@ -172,7 +113,7 @@ fun StudentCalendarScreen() {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Filled.KeyboardArrowLeft,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     contentDescription = "Previous month"
                 )
             }
@@ -186,7 +127,6 @@ fun StudentCalendarScreen() {
                 modifier = Modifier
                     .size(40.dp)
                     .clickable {
-                        // next month
                         if (monthIndex == 11) {
                             monthIndex = 0
                             year += 1
@@ -198,7 +138,7 @@ fun StudentCalendarScreen() {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Filled.KeyboardArrowRight,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Next month"
                 )
             }
@@ -206,7 +146,6 @@ fun StudentCalendarScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Weekday header
         val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         Row(modifier = Modifier.fillMaxWidth()) {
             weekDays.forEach { label ->
@@ -222,7 +161,6 @@ fun StudentCalendarScreen() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Calendar grid
         Column {
             var day = 1
             for (week in 0 until 6) {
@@ -232,13 +170,13 @@ fun StudentCalendarScreen() {
                 ) {
                     for (d in 0 until 7) {
                         if (day <= daysInMonth) {
+
                             val dayNumber = day
                             val isSelected = dayNumber == selectedDay
-                            val isToday = (
-                                    year == todayYear &&
-                                            monthIndex == todayMonth &&
-                                            dayNumber == todayDay
-                                    )
+                            val isToday =
+                                year == todayYear &&
+                                        monthIndex == todayMonth &&
+                                        dayNumber == todayDay
 
                             Box(
                                 modifier = Modifier
@@ -256,16 +194,15 @@ fun StudentCalendarScreen() {
                                     .clickable { selectedDay = dayNumber },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
                                         text = dayNumber.toString(),
-                                        color = if (isSelected)
-                                            MaterialTheme.colorScheme.onPrimary
-                                        else
-                                            MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        color =
+                                            if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                            else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight =
+                                            if (isSelected) FontWeight.Bold
+                                            else FontWeight.Normal
                                     )
 
                                     Spacer(modifier = Modifier.height(2.dp))
@@ -296,7 +233,6 @@ fun StudentCalendarScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Tasks Section
         Text(
             text = "Tasks for $selectedDay $monthLabel",
             style = MaterialTheme.typography.titleMedium,
@@ -313,7 +249,11 @@ fun StudentCalendarScreen() {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(tasksForSelectedDay) { task ->
-                    val borderColor = when (task.category) {
+
+                    val taskCategory = runCatching { TaskCategory.valueOf(task.category) }
+                        .getOrElse { TaskCategory.PERSONAL }
+
+                    val borderColor = when (taskCategory) {
                         TaskCategory.CLASS -> MaterialTheme.colorScheme.primary
                         TaskCategory.EXAM -> MaterialTheme.colorScheme.error
                         TaskCategory.CCA -> MaterialTheme.colorScheme.tertiary
@@ -327,24 +267,28 @@ fun StudentCalendarScreen() {
                                 width = 2.dp,
                                 color = borderColor,
                                 shape = RoundedCornerShape(12.dp)
-                            ),
+                            )
+                            .clickable { selectedTask = task },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
                         )
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
+
                             Text(
                                 text = task.title,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
+
                             Text(
-                                text = task.time,
+                                text = "${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
                                 fontSize = 12.sp
                             )
+
                             Text(
-                                text = task.category.label,
+                                text = taskCategory.label,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = borderColor
@@ -355,13 +299,49 @@ fun StudentCalendarScreen() {
             }
         }
     }
+
+    //  show full details of task
+    selectedTask?.let { task ->
+        val taskCategory = runCatching { TaskCategory.valueOf(task.category) }
+            .getOrElse { TaskCategory.PERSONAL }
+
+        AlertDialog(
+            onDismissRequest = { selectedTask = null },
+            confirmButton = {
+                TextButton(onClick = { selectedTask = null }) {
+                    Text("Close")
+                }
+            },
+            title = { Text(task.title, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Time: ${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}")
+                    Text("Category: ${taskCategory.label}")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (task.description.isNotBlank()) task.description else "No description provided.",
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        )
+    }
+}
+
+private fun parseYMD(date: String): Triple<Int, Int, Int>? {
+    val parts = date.split("-")
+    if (parts.size != 3) return null
+    val y = parts[0].toIntOrNull() ?: return null
+    val m = parts[1].toIntOrNull() ?: return null
+    val d = parts[2].toIntOrNull() ?: return null
+    return Triple(y, m - 1, d)
 }
 
 private fun hasEventsOnDay(
     year: Int,
     month: Int,
     day: Int,
-    tasks: Map<Triple<Int, Int, Int>, List<CalendarTask>>
+    tasks: Map<Triple<Int, Int, Int>, List<Task>>
 ): Boolean {
     return tasks[Triple(year, month, day)]?.isNotEmpty() == true
 }

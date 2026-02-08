@@ -43,27 +43,23 @@ class MainActivity : FragmentActivity() {
 @Composable
 fun AppContent() {
     var loggedIn by rememberSaveable { mutableStateOf(false) }
+    var showRegister by rememberSaveable { mutableStateOf(false) }
 
     if (loggedIn) {
-        MAD25_T01_Team2_NPAL2App()
+        MAD25_T01_Team2_NPAL2App(
+            onLogout = { loggedIn = false }
+        )
     } else {
-        LoginScreen(onLoginSuccess = { loggedIn = true })
+        if (showRegister) {
+            RegisterScreen(
+                onRegisterSuccess = { showRegister = false },
+                onBack = { showRegister = false }
+            )
+        } else {
+            LoginScreen(
+                onLoginSuccess = { loggedIn = true },
+                onRegisterClick = { showRegister = true}
+            )
+        }
     }
 }
-
-/*
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MAD25_T01_Team2_NPAL2Theme {
-        Greeting("Android")
-    }
-}*/

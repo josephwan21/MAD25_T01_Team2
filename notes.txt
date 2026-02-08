@@ -1,9 +1,1 @@
-The map in `SchoolMap.kt` has been updated to allow panning and zooming. The `pointerInput` modifier now includes `detectTransformGestures` to handle pinch-to-zoom and drag-to-pan. The scale is clamped between 0.5x and 5x, and the offset is clamped to keep the map within the view bounds. A `userInteracted` flag was introduced to ensure that the initial location-based zooming from `LaunchedEffect` does not override manual user interaction.
-
----
-**2026-02-07: Map Panning Restriction in SchoolMap.kt**
-Implemented stricter panning limits for the interactive map in `SchoolMap.kt`. The `coerceIn` function for `offset.x` and `offset.y` now uses calculated `min/maxXLimit` and `min/maxYLimit` values. These limits ensure that the map content does not pan more than 10 pixels beyond any edge of the viewport, providing a more controlled and user-friendly panning experience. This prevents the map from completely disappearing off-screen during extensive panning.
-
----
-**2026-02-07: Fix Indentation in SchoolMap.kt**
-Corrected an indentation error in `SchoolMap.kt` within the `pointerInput` block. An incorrectly indented code block led to an "Unresolved reference 'event'" error during compilation. The indentation has been adjusted to ensure correct scope parsing.
+//
