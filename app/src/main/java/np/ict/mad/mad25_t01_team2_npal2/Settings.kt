@@ -1,5 +1,6 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -40,6 +41,7 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     modifier: Modifier
 ) {
+    val context = LocalContext.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -58,7 +60,9 @@ fun SettingsScreen(
             SettingsItem(
                 title = "Account",
                 subtitle = "Email, password",
-                onClick = onAccountClick
+                onClick = {
+                    context.startActivity(Intent(context, AccountActivity::class.java))
+                }
             )
         }
 
