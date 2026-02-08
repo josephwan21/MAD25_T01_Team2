@@ -16,14 +16,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
-import java.util.UUID
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 /* -------------------- DATA -------------------- */
 
@@ -44,7 +48,6 @@ data class InAppNotification(
     val taskCategory: String? = null
 )
 
-
 /* -------------------- CENTER -------------------- */
 
 object NotificationCenter {
@@ -54,6 +57,12 @@ object NotificationCenter {
 
     private val pushedKeys = mutableSetOf<String>()
 
+    private var suppressPushUntil: Long = 0L
+
+    fun suppressPushesFor(ms: Long) {
+        suppressPushUntil = System.currentTimeMillis() + ms
+    }
+
     fun setAll(list: List<InAppNotification>) {
         _notifications.value = list
         pushedKeys.clear()
@@ -62,13 +71,12 @@ object NotificationCenter {
 
     fun clearAll(userId: String) {
         _notifications.value = _notifications.value.filterNot { it.userId == userId }
+        // rebuild pushedKeys from whatever remains (other users)
         pushedKeys.clear()
         pushedKeys.addAll(_notifications.value.mapNotNull { it.key.ifBlank { null } })
     }
 
-
     fun pushOnce(
-
         context: Context,
         firebaseHelper: FirebaseHelper,
         key: String,
@@ -76,11 +84,22 @@ object NotificationCenter {
         title: String,
         message: String,
         timestamp: Long = System.currentTimeMillis(),
+        kind: NotificationKind = NotificationKind.GENERIC,
         taskCategory: String? = null
-
     ) {
+
         if (!isNotificationsEnabled(context)) return
+
+
+        if (System.currentTimeMillis() < suppressPushUntil) return
+
+
+        if (key.isBlank()) return
+
+        // prevent duplicates
         if (pushedKeys.contains(key)) return
+        if (_notifications.value.any { it.id == key }) return
+
         pushedKeys.add(key)
 
         val n = InAppNotification(
@@ -91,17 +110,13 @@ object NotificationCenter {
             message = message,
             timestamp = timestamp,
             isRead = false,
+            kind = kind,
             taskCategory = taskCategory
         )
 
-
-
-
-        if (_notifications.value.any { it.id == key }) return
-
         _notifications.value = listOf(n) + _notifications.value
 
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             firebaseHelper.saveNotificationIfMissing(userId, n)
         }
     }
@@ -122,7 +137,6 @@ object NotificationCenter {
         return _notifications.value.count { it.userId == userId && !it.isRead }
     }
 }
-
 /* -------------------- HELPERS -------------------- */
 
 fun startOfTodayMillis(): Long {
@@ -158,7 +172,6 @@ fun cleanStartsMessage(msg: String): String {
         .trim()
 }
 
-
 /* -------------------- SCREEN -------------------- */
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -170,10 +183,21 @@ fun NotificationsScreen(
 ) {
     val all by NotificationCenter.notifications.collectAsState()
     val scope = rememberCoroutineScope()
+
     LaunchedEffect(userId) {
         val remote = firebaseHelper.getNotifications(userId)
         NotificationCenter.setAll(remote)
     }
+
+    if (userId.isBlank()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val context = LocalContext.current
+    val notificationsEnabled = isNotificationsEnabled(context)
 
     val todayStart = startOfTodayMillis()
     val yesterdayStart = todayStart - 24L * 60L * 60L * 1000L
@@ -187,8 +211,6 @@ fun NotificationsScreen(
     val earlierList = userNotifications.filter { it.timestamp < yesterdayStart }
     var showEarlier by rememberSaveable { mutableStateOf(false) }
 
-
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -199,17 +221,26 @@ fun NotificationsScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = {
-                        NotificationCenter.markAllRead(userId)
-                        scope.launch { firebaseHelper.markAllNotificationsRead(userId) }
-                    }) { Text("Mark all read") }
-
-                    TextButton(onClick = {
-                        scope.launch {
-                            val ok = firebaseHelper.deleteAllNotifications(userId)
-                            if (ok) NotificationCenter.clearAll(userId)
+                    TextButton(
+                        enabled = userNotifications.isNotEmpty(),
+                        onClick = {
+                            NotificationCenter.markAllRead(userId)
+                            scope.launch { firebaseHelper.markAllNotificationsRead(userId) }
                         }
-                    }) { Text("Clear") }
+                    ) { Text("Mark all read") }
+
+                    TextButton(
+                        enabled = userNotifications.isNotEmpty(),
+                        onClick = {
+                            scope.launch {
+                                val ok = firebaseHelper.deleteAllNotifications(userId)
+                                if (ok) {
+                                    NotificationCenter.clearAll(userId)
+                                    NotificationCenter.suppressPushesFor(10_000)
+                                }
+                            }
+                        }
+                    ) { Text("Clear") }
                 }
             )
         }
@@ -218,39 +249,79 @@ fun NotificationsScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
+
+            if (!notificationsEnabled) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(
+                            text = "Notifications are turned off",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Turn them on in Settings to receive task reminders.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             if (userNotifications.isEmpty()) {
-                Text("No notifications")
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "No notifications",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = if (!notificationsEnabled)
+                                "Enable notifications to start receiving reminders."
+                            else
+                                "You’ll see reminders here when tasks are coming up.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
 
                     if (todayList.isNotEmpty()) {
-                        item {
-                            Text("Today", style = MaterialTheme.typography.labelLarge)
-                        }
+                        item { SectionHeader("Today") }
                         items(todayList, key = { it.id }) { n ->
                             NotificationBubble(n, showStartsLabel = true)
                         }
-
                     }
 
                     if (yesterdayList.isNotEmpty()) {
-                        item {
-                            Text("Yesterday", style = MaterialTheme.typography.labelLarge)
-                        }
+                        item { SectionHeader("Yesterday") }
                         items(yesterdayList, key = { it.id }) { n ->
                             NotificationBubble(n, showStartsLabel = false)
                         }
-
                     }
 
                     if (earlierList.isNotEmpty()) {
-
-                        // Header row with arrow
                         item {
                             Row(
                                 modifier = Modifier
@@ -260,8 +331,7 @@ fun NotificationsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Earlier", style = MaterialTheme.typography.labelLarge)
-
+                                SectionHeader("Earlier")
                                 Text(
                                     text = if (showEarlier) "Hide" else "Show",
                                     style = MaterialTheme.typography.labelMedium,
@@ -270,29 +340,31 @@ fun NotificationsScreen(
                             }
                         }
 
-                        // Only show list when expanded
                         if (showEarlier) {
                             items(earlierList, key = { it.id }) { n ->
                                 NotificationBubble(n, showStartsLabel = false)
                             }
                         }
                     }
-
                 }
             }
-
         }
     }
 }
-
 /* -------------------- UI -------------------- */
 
 @Composable
-private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
+private fun NotificationBubble(
+    n: InAppNotification,
+    showStartsLabel: Boolean
+) {
     val bg = if (n.isRead)
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     else
         MaterialTheme.colorScheme.surfaceVariant
+
+    val cleaned = cleanStartsMessage(n.message)
+    val dotColor = categoryDotColor(n.taskCategory)
 
     Row(
         modifier = Modifier
@@ -303,16 +375,18 @@ private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+
         Box(
             modifier = Modifier
-                .size(8.dp)
+                .size(10.dp)
                 .clip(RoundedCornerShape(50))
-                .background(categoryDotColor(n.taskCategory))
+                .background(dotColor)
         )
 
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
 
         Column(Modifier.weight(1f)) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -320,9 +394,10 @@ private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
             ) {
                 Text(
                     text = n.title,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = if (n.isRead) FontWeight.Medium else FontWeight.SemiBold,
                     style = MaterialTheme.typography.titleSmall
                 )
+
                 Text(
                     text = timeAgo(n.timestamp),
                     style = MaterialTheme.typography.labelSmall,
@@ -333,14 +408,16 @@ private fun NotificationBubble(n: InAppNotification, showStartsLabel: Boolean) {
             Spacer(Modifier.height(2.dp))
 
             Text(
-                text = if (showStartsLabel) n.message else cleanStartsMessage(n.message),
+                text = if (showStartsLabel)
+                    "Starts in 1 hour • $cleaned"
+                else
+                    cleaned,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
-
 
 @Composable
 private fun SectionHeader(text: String) {
@@ -351,6 +428,7 @@ private fun SectionHeader(text: String) {
         modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)
     )
 }
+
 @Composable
 private fun categoryDotColor(taskCategory: String?): Color {
     return when (taskCategory) {

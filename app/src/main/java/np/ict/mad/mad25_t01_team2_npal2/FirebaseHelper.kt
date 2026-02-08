@@ -1,13 +1,11 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
-
-import android.R.attr.identifier
 import android.util.Log
-import androidx.room.util.copy
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 
 data class Task(
@@ -28,16 +26,15 @@ data class UserProfile(
     val email: String = ""
 )
 
-class FirebaseHelper{
+class FirebaseHelper {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
-    private fun toEmail(username:String): String {
-        return if(username.contains("@")){
-            username
-        }else{
-            "$username@gmail.com" //placeholder email
-        }
+    /* -------------------- AUTH / PROFILE -------------------- */
+
+    private fun toEmail(username: String): String {
+        return if (username.contains("@")) username else "$username@gmail.com" // placeholder
     }
 
     private fun usernameFromEmail(email: String): String {
@@ -63,8 +60,7 @@ class FirebaseHelper{
                 email = email
             )
 
-            FirebaseFirestore.getInstance()
-                .collection("users")
+            db.collection("users")
                 .document(user.uid)
                 .set(profile)
                 .await()
@@ -76,27 +72,13 @@ class FirebaseHelper{
         }
     }
 
-
-
-    /*suspend fun signIn(username: String, password: String):Boolean {
-        return try{
-            val email = toEmail(username)
-            val result = auth.signInWithEmailAndPassword(email, password).await()
-            result.user!= null
-        } catch (e:Exception){
-            Log.e("FirebaseHelper", "Login Failed!", e)
-            false
-        }
-    }*/
-
     suspend fun signIn(usernameOrEmail: String, password: String): Boolean {
         return try {
             val email = if (usernameOrEmail.contains("@")) {
-                // User entered email directly
                 usernameOrEmail
             } else {
-                val usersRef = FirebaseFirestore.getInstance().collection("users")
-                // User entered username, look up in Firestore
+                val usersRef = db.collection("users")
+
                 var querySnapshot = usersRef
                     .whereEqualTo("username", usernameOrEmail)
                     .get()
@@ -105,7 +87,10 @@ class FirebaseHelper{
                 var userDoc = querySnapshot.documents.firstOrNull()
 
                 if (userDoc == null) {
-                    querySnapshot = usersRef.whereEqualTo("studentId", usernameOrEmail).get().await()
+                    querySnapshot = usersRef
+                        .whereEqualTo("studentId", usernameOrEmail)
+                        .get()
+                        .await()
                     userDoc = querySnapshot.documents.firstOrNull()
                 }
 
@@ -125,26 +110,21 @@ class FirebaseHelper{
         }
     }
 
-
-    suspend fun signUp(username: String, password: String): Boolean
-    {
-        return try{
+    suspend fun signUp(username: String, password: String): Boolean {
+        return try {
             val email = toEmail(username)
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val user = result.user ?: return false
-
             createUserProfile(user)
-        } catch (e:Exception){
-            Log.e("FirebaseHelper", "Login Failed", e)
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Sign-up Failed", e)
             false
         }
-
     }
 
-    suspend fun reAuthenticate(password: String): Boolean {
+    private suspend fun reAuthenticate(password: String): Boolean {
         val user = auth.currentUser ?: return false
         val email = user.email ?: return false
-
         return try {
             val credential = EmailAuthProvider.getCredential(email, password)
             user.reauthenticate(credential).await()
@@ -157,15 +137,11 @@ class FirebaseHelper{
 
     suspend fun updateUsername(newUsername: String): Boolean {
         val user = auth.currentUser ?: return false
-
         return try {
-            // Update the username in Firestore only
-            val userRef = FirebaseFirestore.getInstance()
-                .collection("users")
+            db.collection("users")
                 .document(user.uid)
-
-            // Only update the username field, keep other data intact
-            userRef.update("username", newUsername).await()
+                .update("username", newUsername)
+                .await()
             true
         } catch (e: Exception) {
             Log.e("FirebaseHelper", "Update Username Failed", e)
@@ -176,10 +152,7 @@ class FirebaseHelper{
     suspend fun updatePassword(newPassword: String, currentPassword: String): Boolean {
         val user = auth.currentUser ?: return false
         return try {
-            // Re-authenticate first
-            val reAuthSuccess = reAuthenticate(currentPassword)
-            if (!reAuthSuccess) return false
-
+            if (!reAuthenticate(currentPassword)) return false
             user.updatePassword(newPassword).await()
             true
         } catch (e: Exception) {
@@ -191,29 +164,28 @@ class FirebaseHelper{
     suspend fun getUserProfile(): UserProfile? {
         val user = auth.currentUser ?: return null
         return try {
-            FirebaseFirestore.getInstance()
-                .collection("users")
+            db.collection("users")
                 .document(user.uid)
                 .get()
                 .await()
-                .toObject(UserProfile::class.java) // converts document to UserProfile
+                .toObject(UserProfile::class.java)
         } catch (e: Exception) {
             Log.e("FirebaseHelper", "Get user profile failed", e)
             null
         }
     }
 
+    /* -------------------- TASKS -------------------- */
+
     suspend fun saveTask(userId: String, task: Task): Boolean {
         return try {
-            val db = FirebaseFirestore.getInstance()
             val newDoc = db.collection("users")
                 .document(userId)
                 .collection("TasksfromUser")
                 .document()
 
-            val taskWithId = task.copy(id = newDoc.id)
+            val taskWithId = task.copy(id = newDoc.id, userId = userId)
             newDoc.set(taskWithId).await()
-
             true
         } catch (e: Exception) {
             Log.e("FirebaseHelper", "Save Task Failed", e)
@@ -223,7 +195,6 @@ class FirebaseHelper{
 
     suspend fun getTasks(userId: String): List<Task> {
         return try {
-            val db = FirebaseFirestore.getInstance()
             val snapshot = db.collection("users")
                 .document(userId)
                 .collection("TasksfromUser")
@@ -239,8 +210,7 @@ class FirebaseHelper{
 
     suspend fun deleteTask(userId: String, taskId: String): Boolean {
         return try {
-            FirebaseFirestore.getInstance()
-                .collection("users")
+            db.collection("users")
                 .document(userId)
                 .collection("TasksfromUser")
                 .document(taskId)
@@ -252,14 +222,14 @@ class FirebaseHelper{
             false
         }
     }
+
     suspend fun updateTask(userId: String, task: Task): Boolean {
         return try {
-            FirebaseFirestore.getInstance()
-                .collection("users")
+            db.collection("users")
                 .document(userId)
                 .collection("TasksfromUser")
                 .document(task.id)
-                .set(task)
+                .set(task.copy(userId = userId))
                 .await()
             true
         } catch (e: Exception) {
@@ -268,23 +238,33 @@ class FirebaseHelper{
         }
     }
 
+    /* -------------------- NOTIFICATIONS -------------------- */
 
-
-    suspend fun saveNotificationIfMissing(
-        userId: String,
-        n: InAppNotification
-    ): Boolean {
+    /**
+     * IMPORTANT:
+     * - Uses deterministic doc id = n.key (not random),
+     * - So save is idempotent and duplicates won't occur.
+     */
+    suspend fun saveNotificationIfMissing(userId: String, n: InAppNotification): Boolean {
         return try {
-            val docRef = FirebaseFirestore.getInstance()
-                .collection("users")
+            val docId = if (n.key.isNotBlank()) n.key else n.id
+            if (docId.isBlank()) return false
+
+            val docRef = db.collection("users")
                 .document(userId)
                 .collection("notifications")
-                .document(n.id) // n.id must be deterministic
+                .document(docId)
 
             val existing = docRef.get().await()
-            if (existing.exists()) return true   // ✅ DO NOT overwrite
+            if (existing.exists()) return true // don't overwrite
 
-            docRef.set(n).await()
+            val fixed = n.copy(
+                id = docId,
+                key = docId,
+                userId = userId
+            )
+
+            docRef.set(fixed).await()
             true
         } catch (e: Exception) {
             Log.e("FirebaseHelper", "Save notification failed", e)
@@ -294,11 +274,10 @@ class FirebaseHelper{
 
     suspend fun getNotifications(userId: String, limit: Long = 50): List<InAppNotification> {
         return try {
-            val snap = FirebaseFirestore.getInstance()
-                .collection("users")
+            val snap = db.collection("users")
                 .document(userId)
                 .collection("notifications")
-                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(limit)
                 .get()
                 .await()
@@ -309,9 +288,9 @@ class FirebaseHelper{
             emptyList()
         }
     }
+
     suspend fun deleteAllNotifications(userId: String): Boolean {
         return try {
-            val db = FirebaseFirestore.getInstance()
             val snap = db.collection("users")
                 .document(userId)
                 .collection("notifications")
@@ -319,9 +298,7 @@ class FirebaseHelper{
                 .await()
 
             val batch = db.batch()
-            snap.documents.forEach { doc ->
-                batch.delete(doc.reference)
-            }
+            snap.documents.forEach { doc -> batch.delete(doc.reference) }
             batch.commit().await()
             true
         } catch (e: Exception) {
@@ -332,7 +309,6 @@ class FirebaseHelper{
 
     suspend fun markAllNotificationsRead(userId: String): Boolean {
         return try {
-            val db = FirebaseFirestore.getInstance()
             val snap = db.collection("users")
                 .document(userId)
                 .collection("notifications")
@@ -342,7 +318,6 @@ class FirebaseHelper{
             val batch = db.batch()
             snap.documents.forEach { doc ->
                 batch.update(doc.reference, "isRead", true)
-
             }
             batch.commit().await()
             true
@@ -351,7 +326,4 @@ class FirebaseHelper{
             false
         }
     }
-
-
 }
-

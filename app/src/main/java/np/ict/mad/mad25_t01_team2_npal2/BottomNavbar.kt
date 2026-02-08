@@ -29,9 +29,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.delay
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
 import java.text.SimpleDateFormat
 
@@ -51,6 +53,8 @@ import java.text.SimpleDateFormat
 fun MAD25_T01_Team2_NPAL2App(
     onLogout : () -> Unit
 ) {
+
+    val context = LocalContext.current
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     val firebaseHelper = FirebaseHelper()
     //val currentUserId = "example_user_id" // or get it from FirebaseAuth.currentUser?.uid
@@ -59,6 +63,27 @@ fun MAD25_T01_Team2_NPAL2App(
     var showNotifications by rememberSaveable { mutableStateOf(false) }
     var settingsSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
 
+
+
+    // ✅ THIS is what makes notifications actually get pushed
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isBlank()) return@LaunchedEffect
+
+        while (true) {
+            try {
+                val tasks = firebaseHelper.getTasks(currentUserId)
+                TaskReminder.run(
+                    context = context,
+                    firebaseHelper = firebaseHelper,
+                    userId = currentUserId,
+                    tasks = tasks
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("TaskReminder", "run failed", e)
+            }
+            delay(60_000) // check every minute
+        }
+    }
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             AppDestinations.entries.forEach {
