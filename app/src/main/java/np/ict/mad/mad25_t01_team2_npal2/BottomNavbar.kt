@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -18,9 +19,12 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import com.google.firebase.auth.FirebaseAuth
@@ -51,6 +56,10 @@ import java.text.SimpleDateFormat
 fun MAD25_T01_Team2_NPAL2App(
     onLogout : () -> Unit
 ) {
+    val context = LocalContext.current
+    var isDarkMode by rememberSaveable {
+        mutableStateOf(ThemePrefs.loadDarkMode(context))
+    }
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     val firebaseHelper = FirebaseHelper()
     //val currentUserId = "example_user_id" // or get it from FirebaseAuth.currentUser?.uid
@@ -58,80 +67,89 @@ fun MAD25_T01_Team2_NPAL2App(
     val currentUserId = currentUser?.uid ?: ""
     var showNotifications by rememberSaveable { mutableStateOf(false) }
     var settingsSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
-
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = it.label
-                        )
-                    },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = {
-                        showNotifications = false // close notif screen if open
-                        settingsSubScreen = null
-                        currentDestination = it
-                    }
-                )
-            }
-        }
+    val colors = if (isDarkMode) darkColorScheme() else lightColorScheme()
+    MaterialTheme(
+        colorScheme = colors
     ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->             // If user opened notifications (via bell), show it FULL SCREEN
-            settingsSubScreen?.let { subScreen ->
-                when (subScreen) {
-                    SettingsSubScreen.NOTIFICATIONS -> NotificationSettingsScreen(onBack = { settingsSubScreen = null }, modifier = Modifier)
-                    SettingsSubScreen.ACCOUNT -> AccountScreen(onBack = { settingsSubScreen = null }, firebaseHelper, modifier = Modifier)
-                    SettingsSubScreen.SUPPORT -> HelpSupportScreen(onBack = { settingsSubScreen = null }, modifier = Modifier)
+        NavigationSuiteScaffold(
+            navigationSuiteItems = {
+                AppDestinations.entries.forEach {
+                    item(
+                        icon = {
+                            Icon(
+                                it.icon,
+                                contentDescription = it.label
+                            )
+                        },
+                        label = { Text(it.label) },
+                        selected = it == currentDestination,
+                        onClick = {
+                            showNotifications = false // close notif screen if open
+                            settingsSubScreen = null
+                            currentDestination = it
+                        }
+                    )
                 }
-                return@Scaffold
             }
+        ) {
+            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->             // If user opened notifications (via bell), show it FULL SCREEN
+                settingsSubScreen?.let { subScreen ->
+                    when (subScreen) {
+                        SettingsSubScreen.NOTIFICATIONS -> NotificationSettingsScreen(onBack = { settingsSubScreen = null }, modifier = Modifier)
+                        SettingsSubScreen.ACCOUNT -> AccountScreen(onBack = { settingsSubScreen = null }, firebaseHelper, modifier = Modifier)
+                        SettingsSubScreen.SUPPORT -> HelpSupportScreen(onBack = { settingsSubScreen = null }, modifier = Modifier)
+                    }
+                    return@Scaffold
+                }
 
-            if (showNotifications) {
-                NotificationsScreen(
-                    firebaseHelper = firebaseHelper,
-                    userId = currentUserId,
-                    onBack = { showNotifications = false }
-                )
-                return@Scaffold
-            }
+                if (showNotifications) {
+                    NotificationsScreen(
+                        firebaseHelper = firebaseHelper,
+                        userId = currentUserId,
+                        onBack = { showNotifications = false }
+                    )
+                    return@Scaffold
+                }
 
-            val contentModifier = Modifier.padding(innerPadding)
-            when (currentDestination) {
-                AppDestinations.HOME -> HomeScreenContent(
-                    onTaskClick = { currentDestination = AppDestinations.TASKS },
-                    modifier = Modifier.padding(innerPadding)
-                )
-                AppDestinations.TASKS -> TaskListScreenContent(
-                    firebaseHelper = firebaseHelper,
-                    userId = currentUserId,
-                    onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
-                    onOpenNotifications = { showNotifications = true },
-                    modifier = Modifier.padding(innerPadding)
-                )
-                AppDestinations.CREATE_TASKS -> CreateTaskScreen(
-                    onBack = { currentDestination = AppDestinations.TASKS},
-                    firebaseHelper = firebaseHelper,
-                    userId = currentUserId
-                )
-                //AppDestinations.SETTINGS -> ProfileScreen() Add later
-                AppDestinations.CALENDAR -> {
-                    StudentCalendarScreen(
+                val contentModifier = Modifier.padding(innerPadding)
+                when (currentDestination) {
+                    AppDestinations.HOME -> HomeScreenContent(
+                        onTaskClick = { currentDestination = AppDestinations.TASKS },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                    AppDestinations.TASKS -> TaskListScreenContent(
+                        firebaseHelper = firebaseHelper,
+                        userId = currentUserId,
+                        onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
+                        onOpenNotifications = { showNotifications = true },
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                    AppDestinations.CREATE_TASKS -> CreateTaskScreen(
+                        onBack = { currentDestination = AppDestinations.TASKS},
                         firebaseHelper = firebaseHelper,
                         userId = currentUserId
                     )
+                    //AppDestinations.SETTINGS -> ProfileScreen() Add later
+                    AppDestinations.CALENDAR -> {
+                        StudentCalendarScreen(
+                            firebaseHelper = firebaseHelper,
+                            userId = currentUserId
+                        )
+                    }
+                    AppDestinations.MAP -> SchoolMap()
+                    AppDestinations.SETTINGS -> SettingsScreen(
+                        onLogout = onLogout,
+                        onAccountClick = { settingsSubScreen = SettingsSubScreen.ACCOUNT },
+                        onNotificationsClick = { settingsSubScreen = SettingsSubScreen.NOTIFICATIONS },
+                        onHelpClick = { settingsSubScreen = SettingsSubScreen.SUPPORT},
+                        isDarkMode = isDarkMode,
+                        onDarkModeToggle = {
+                            isDarkMode = it
+                            ThemePrefs.saveDarkMode(context, it)
+                        },
+                        modifier = Modifier.padding(innerPadding)
+                    )
                 }
-                AppDestinations.MAP -> SchoolMap()
-                AppDestinations.SETTINGS -> SettingsScreen(
-                    onLogout = onLogout,
-                    onAccountClick = { settingsSubScreen = SettingsSubScreen.ACCOUNT },
-                    onNotificationsClick = { settingsSubScreen = SettingsSubScreen.NOTIFICATIONS },
-                    onHelpClick = { settingsSubScreen = SettingsSubScreen.SUPPORT},
-                    modifier = Modifier.padding(innerPadding)
-                )
             }
         }
     }
@@ -155,23 +173,4 @@ enum class SettingsSubScreen {
 
     SUPPORT
 }
-
-
-
-
-/*@Composable
-fun Greeting2(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview2() {
-    MAD25_T01_Team2_NPAL2Theme {
-        Greeting2("Android")
-    }
-}*/
 

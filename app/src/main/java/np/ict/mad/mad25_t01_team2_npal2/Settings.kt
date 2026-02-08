@@ -39,6 +39,8 @@ fun SettingsScreen(
     onNotificationsClick: () -> Unit,
     onHelpClick: () -> Unit,
     onLogout: () -> Unit,
+    isDarkMode: Boolean,
+    onDarkModeToggle: (Boolean) -> Unit,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -83,10 +85,29 @@ fun SettingsScreen(
         }
 
         item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Dark Mode", style = MaterialTheme.typography.bodyLarge)
+                Switch(
+                    checked = isDarkMode,
+                    onCheckedChange = onDarkModeToggle
+                )
+            }
+        }
+
+        item {
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = onLogout,
+                onClick = {
+                    PrefsHelper.clearLogin(context)
+                    onLogout()
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 ),
