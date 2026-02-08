@@ -28,15 +28,25 @@ data class UserProfile(
     val email: String = ""
 )
 
+data class LocationFeedback(
+    val id: String = "",
+    val userId: String = "",
+    val locationName: String = "",
+    val rating: Int = 0,
+    val comment: String = "",
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 class FirebaseHelper{
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     private fun toEmail(username:String): String {
         return if(username.contains("@")){
             username
         }else{
-            "$username@gmail.com" //placeholder email
+            "$username@gmail.com"
         }
     }
 
@@ -138,7 +148,6 @@ class FirebaseHelper{
             Log.e("FirebaseHelper", "Login Failed", e)
             false
         }
-
     }
 
     suspend fun reAuthenticate(password: String): Boolean {
@@ -205,7 +214,6 @@ class FirebaseHelper{
 
     suspend fun saveTask(userId: String, task: Task): Boolean {
         return try {
-            val db = FirebaseFirestore.getInstance()
             val newDoc = db.collection("users")
                 .document(userId)
                 .collection("TasksfromUser")
@@ -223,7 +231,6 @@ class FirebaseHelper{
 
     suspend fun getTasks(userId: String): List<Task> {
         return try {
-            val db = FirebaseFirestore.getInstance()
             val snapshot = db.collection("users")
                 .document(userId)
                 .collection("TasksfromUser")
