@@ -63,20 +63,3 @@ fun AppContent() {
         }
     }
 }
-
-/*
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MAD25_T01_Team2_NPAL2Theme {
-        Greeting("Android")
-    }
-}*/

@@ -27,14 +27,24 @@ data class UserProfile(
 )
 
 class FirebaseHelper {
+data class LocationFeedback(
+    val id: String = "",
+    val userId: String = "",
+    val locationName: String = "",
+    val rating: Int = 0,
+    val comment: String = "",
+    val timestamp: Long = System.currentTimeMillis()
+)
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
-    /* -------------------- AUTH / PROFILE -------------------- */
-
-    private fun toEmail(username: String): String {
-        return if (username.contains("@")) username else "$username@gmail.com" // placeholder
+    private fun toEmail(username:String): String {
+        return if(username.contains("@")){
+            username
+        }else{
+            "$username@gmail.com"
+        }
     }
 
     private fun usernameFromEmail(email: String): String {

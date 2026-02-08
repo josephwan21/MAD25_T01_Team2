@@ -1,5 +1,6 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -38,8 +39,11 @@ fun SettingsScreen(
     onNotificationsClick: () -> Unit,
     onHelpClick: () -> Unit,
     onLogout: () -> Unit,
+    isDarkMode: Boolean,
+    onDarkModeToggle: (Boolean) -> Unit,
     modifier: Modifier
 ) {
+    val context = LocalContext.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -58,7 +62,9 @@ fun SettingsScreen(
             SettingsItem(
                 title = "Account",
                 subtitle = "Email, password",
-                onClick = onAccountClick
+                onClick = {
+                    context.startActivity(Intent(context, AccountActivity::class.java))
+                }
             )
         }
 
@@ -79,10 +85,29 @@ fun SettingsScreen(
         }
 
         item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Dark Mode", style = MaterialTheme.typography.bodyLarge)
+                Switch(
+                    checked = isDarkMode,
+                    onCheckedChange = onDarkModeToggle
+                )
+            }
+        }
+
+        item {
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = onLogout,
+                onClick = {
+                    PrefsHelper.clearLogin(context)
+                    onLogout()
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 ),
@@ -229,6 +254,7 @@ fun AccountScreen(
                         scope.launch {
                             val success = firebaseHelper.updateUsername(newUsername)
                             if (success) {
+                                userProfile = firebaseHelper.getUserProfile()
                                 Toast.makeText(context, "Username updated!", Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, "Failed to update username", Toast.LENGTH_LONG).show()

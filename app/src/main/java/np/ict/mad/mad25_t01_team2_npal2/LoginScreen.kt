@@ -96,19 +96,14 @@ fun LoginScreen(
     onRegisterClick: () -> Unit,
     modifier: Modifier = Modifier
 ){
-    var username by rememberSaveable { mutableStateOf("")}
-    var password by rememberSaveable {mutableStateOf("")}
+    val context = LocalContext.current
+    var username by rememberSaveable { mutableStateOf(PrefsHelper.getSavedUsername(context) ?:"")}
+    var password by rememberSaveable {mutableStateOf(PrefsHelper.getSavedPassword(context) ?:"")}
     var loginVerified by rememberSaveable { mutableStateOf(false) }
     var passwordVisible by rememberSaveable { mutableStateOf(false) } // Toggle state
 
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     val activity = context as? ComponentActivity
-
-
-
-    // Check if biometrics are available
-    val biometricAvailable = remember { activity?.let { isBiometricAvailable(it) } ?: false }
 
     Box(
         modifier = modifier.fillMaxSize()
@@ -174,20 +169,8 @@ fun LoginScreen(
                         scope.launch {
                             val isValid = validateLogin(context, username, password)
                             if(isValid){
+                                PrefsHelper.saveLogin(context, username, password)
                                 onLoginSuccess()
-                                /*showBiometricPrompt(activity = activity,
-                                    onSuccess = { onLoginSuccess() },
-                                    onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
-                                )*/
-                                /*if (activity != null) {
-                                    showBiometricPrompt(
-                                        activity = activity,
-                                        onSuccess = { onLoginSuccess() },
-                                        onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
-                                    )
-                                } else {
-                                    Toast.makeText(context, "Unable to access activity for biometric", Toast.LENGTH_SHORT).show()
-                                }*/
                             }else{
                                 Toast.makeText(context,"Invalid credentials", Toast.LENGTH_SHORT).show()
                             }
@@ -205,25 +188,6 @@ fun LoginScreen(
                 ) {
                     Text("Click to Get Started")
                 }
-//                Button(
-//                    onClick = {
-//                        if(username.isNotEmpty() && password.isNotEmpty()){
-//                            scope.launch {
-//                                val isCreated = performSignUp(context, username, password)
-//                                if(isCreated){
-//                                    Toast.makeText(context, "User has been successfully created", Toast.LENGTH_LONG).show()
-//                                }else{
-//                                    Toast.makeText(context, "Failed to create user", Toast.LENGTH_LONG).show()
-//                                }
-//                            }
-//                        }else{
-//                            Toast.makeText(context, "Please provide more details.", Toast.LENGTH_SHORT).show()
-//                        }
-//                    }
-//                )
-//                {
-//                    Text(text = "Register")
-//                }
             }
         }
     }
@@ -337,57 +301,4 @@ suspend fun performSignUp(context: Context, username: String, password: String):
 }
 suspend fun validateLogin(context: Context, username: String, password: String): Boolean{
     return FirebaseHelper().signIn(username, password)
-}
-
-// Helper that checks device biometric readiness
-fun isBiometricAvailable(context: Context): Boolean {
-    val biometricManager = BiometricManager.from(context)
-    val can = biometricManager.canAuthenticate(
-        BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                BiometricManager.Authenticators.DEVICE_CREDENTIAL
-    )
-    return can == BiometricManager.BIOMETRIC_SUCCESS
-}
-
-// Function to show BiometricPrompt. Pass the current Activity (must be FragmentActivity or ComponentActivity)
-@RequiresApi(Build.VERSION_CODES.P)
-fun showBiometricPrompt(
-    activity: Activity,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) {
-    val executor: Executor = ContextCompat.getMainExecutor(activity)
-
-    val callback = object : BiometricPrompt.AuthenticationCallback() {
-        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-            super.onAuthenticationSucceeded(result)
-            onSuccess()
-        }
-
-        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-            super.onAuthenticationError(errorCode, errString)
-            onError(errString.toString())
-        }
-
-        override fun onAuthenticationFailed() {
-            super.onAuthenticationFailed()
-            // called when biometric doesn't match
-            onError("Authentication failed")
-        }
-    }
-
-    val biometricPrompt = BiometricPrompt(activity as androidx.fragment.app.FragmentActivity, executor, callback)
-
-
-    val promptInfo = BiometricPrompt.PromptInfo.Builder()
-        .setTitle("Biometric login")
-        .setSubtitle("Use fingerprint or device credential to sign in")
-        // either allow device credential (PIN/pattern) OR provide a negative button:
-        .setAllowedAuthenticators(
-            BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
-        )
-        .build()
-
-    biometricPrompt.authenticate(promptInfo)
 }
