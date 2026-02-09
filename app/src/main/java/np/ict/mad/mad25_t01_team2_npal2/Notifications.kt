@@ -130,6 +130,12 @@ object NotificationCenter {
         }
     }
 
+    fun dismissAll(userId: String) {
+        _notifications.value = _notifications.value.map {
+            if (it.userId == userId) it.copy(dismissed = true) else it
+        }
+    }
+
 
     fun unreadCount(userId: String): Int {
         return _notifications.value.count {
@@ -231,7 +237,18 @@ fun NotificationsScreen(
                             scope.launch { firebaseHelper.markAllNotificationsRead(userId) }
                         }
                     ) { Text("Mark all read") }
+                    TextButton(
+                        enabled = userNotifications.isNotEmpty(),
+                        onClick = {
+                            NotificationCenter.dismissAll(userId)
+                            scope.launch {
+                                firebaseHelper.dismissAllNotifications(userId)
+                            }
+                        }
+                    ) { Text("Clear All") }
                 }
+
+
             )
         }
     ) { innerPadding ->

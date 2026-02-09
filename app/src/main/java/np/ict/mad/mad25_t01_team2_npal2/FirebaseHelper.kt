@@ -366,6 +366,26 @@ class FirebaseHelper {
         }
     }
 
+    suspend fun dismissAllNotifications(userId: String): Boolean {
+        return try {
+            val snap = db.collection("users")
+                .document(userId)
+                .collection("notifications")
+                .get()
+                .await()
+
+            val batch = db.batch()
+            snap.documents.forEach { doc ->
+                batch.update(doc.reference, "dismissed", true)
+            }
+            batch.commit().await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Dismiss all notifications failed", e)
+            false
+        }
+    }
+
 
     suspend fun markNotificationRead(userId: String, notifId: String): Boolean {
         return try {

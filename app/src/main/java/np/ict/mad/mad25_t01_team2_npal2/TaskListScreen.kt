@@ -299,8 +299,7 @@ fun TaskListUI(
     Scaffold(
         topBar = {
             val allNotifs by NotificationCenter.notifications.collectAsState()
-            val unread = allNotifs.count { it.userId == userId && !it.isRead }
-
+            val unread = NotificationCenter.unreadCount(userId)
             TopAppBar(
                 title = { Text("Tasks") },
                 actions = {
