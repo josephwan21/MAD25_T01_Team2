@@ -70,5 +70,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     //Icons
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
-
+    // BarCode
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation("com.google.zxing:core:3.5.1")
 }

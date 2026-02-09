@@ -23,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
@@ -50,7 +52,7 @@ fun MAD25_T01_Team2_NPAL2App(
     val currentUserId = currentUser?.uid ?: ""
 
     // Emily: User Data State
-    var user by remember { mutableStateOf(UserData(uid = currentUserId)) }
+    var user by remember { mutableStateOf(UserData(uid = currentUserId,)) }
 
     var showNotifications by rememberSaveable { mutableStateOf(false) }
     var settingsSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
@@ -80,8 +82,8 @@ fun MAD25_T01_Team2_NPAL2App(
                     username = doc.getString("username") ?: "",
                     email = doc.getString("email") ?: (currentUser?.email ?: ""),
                     studentId = doc.getString("studentId") ?: "",
-                    uid = doc.getString("uid") ?: currentUserId
-                )
+                    uid = doc.getString("uid") ?: currentUserId,
+                    cardThemeIndex = (doc.getLong("cardThemeIndex") ?: 0L).toInt()                )
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("UserData", "Failed to load user profile", e)
@@ -195,6 +197,7 @@ fun MAD25_T01_Team2_NPAL2App(
                     AppDestinations.STUDENT_CARD ->
                         StudentCardScreen(
                             user = user,
+                            onUserUpdated = { updatedUser -> user = updatedUser },
                             onBack = { currentDestination = AppDestinations.HOME }
                         )
                 }

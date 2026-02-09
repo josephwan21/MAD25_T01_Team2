@@ -1,5 +1,6 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,14 +19,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.google.zxing.BarcodeFormat
+import com.journeyapps.barcodescanner.BarcodeEncoder
 
 @Composable
 fun HomeScreenContent(
@@ -34,8 +40,11 @@ fun HomeScreenContent(
     modifier: Modifier = Modifier,
     onOpenStudentCard: () -> Unit
 ) {
-    // hard coded user's name
-    val displayName = "Ben"
+
+    // User's Data + Fallback
+    val displayName = user.username.ifBlank { "User" }
+    val studentId = user.studentId.ifBlank { "No Student ID" }
+    val uid = user.uid.ifBlank { "No UID" }
 
     LazyColumn(
         modifier = modifier
@@ -46,18 +55,13 @@ fun HomeScreenContent(
         item {
             HeaderRow(
                 name = displayName,
-                // replace image
                 profileImageRes = R.drawable.login_image
             )
         }
 
-        item {
-            TodayRow()
-        }
+        item { TodayRow() }
 
-        item {
-            ScheduleCard()
-        }
+        item { ScheduleCard() }
 
         item {
             Text(
@@ -69,10 +73,12 @@ fun HomeScreenContent(
 
         item {
             StudentCard(
-                name = "Ben",
+                name = displayName,
                 course = "ICT",
-                studentId = "S12345678B",
+                studentId = studentId,
                 validFrom = "04/2021",
+                themeIndex = user.cardThemeIndex,
+                uid = uid,
                 onClick = onOpenStudentCard
             )
         }
@@ -171,8 +177,22 @@ private fun StudentCard(
     course: String,
     studentId: String,
     validFrom: String,
-    onClick: () -> Unit
+    themeIndex: Int,
+    onClick: () -> Unit,
+    uid: String
 ) {
+    val gradientOptions = listOf(
+        listOf(Color(0xFF2E6CF6), Color(0xFF63B4FF)), // blue
+        listOf(Color(0xFFFF6CAB), Color(0xFFFFC3A0)), // pink
+        listOf(Color(0xFF11998E), Color(0xFF38EF7D)), // green
+        listOf(Color(0xFF000000), Color(0xFF434343)), // black
+        listOf(Color(0xFFFF416C), Color(0xFFFF4B2B)), // red
+        listOf(Color(0xFF8E2DE2), Color(0xFF4A00E0))  // purple
+    )
+
+    val safeIndex = themeIndex.coerceIn(0, gradientOptions.lastIndex)
+    val selectedGradient = gradientOptions[safeIndex]
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -186,14 +206,7 @@ private fun StudentCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                Color(0xFF2E6CF6),
-                                Color(0xFF63B4FF)
-                            )
-                        )
-                    )
+                    .background(Brush.linearGradient(colors = selectedGradient))
                     .padding(12.dp)
             ) {
                 Column(modifier = Modifier.align(Alignment.TopStart)) {
@@ -207,10 +220,9 @@ private fun StudentCard(
                     Text(text = "Course: $course", color = Color.White)
                     Text(text = "Student ID: $studentId", color = Color.White)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(text = "Valid From:  $validFrom", color = Color.White)
+                    Text(text = "Valid From: $validFrom", color = Color.White)
                 }
 
-                // place holder for np img
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -220,7 +232,7 @@ private fun StudentCard(
                 )
             }
 
-            // hard code barcode placeholder
+            // Emily: Bar Code Area
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -229,12 +241,12 @@ private fun StudentCard(
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
+                BarcodeFromUid(
+                    uid = uid,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(38.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0x11000000))
                 )
             }
 
@@ -247,5 +259,41 @@ private fun StudentCard(
                 color = Color(0x88000000)
             )
         }
+    }
+}
+
+// Emily: Generate Bar Code
+private fun generateCode128BarcodeBitmap(data: String, width: Int, height: Int): Bitmap? {
+    return try {
+        val encoder = BarcodeEncoder()
+        encoder.encodeBitmap(data, BarcodeFormat.CODE_128, width, height)
+    } catch (e: Exception) {
+        null
+    }
+}
+
+// Emily: Renders User's UID into BarCOde
+@Composable
+private fun BarcodeFromUid(
+    uid: String,
+    modifier: Modifier = Modifier
+) {
+    val bitmap = remember(uid) {
+        val safe = uid.trim()
+        if (safe.isBlank() || safe == "No UID") null
+        else generateCode128BarcodeBitmap(safe, width = 1200, height = 300)
+    }
+
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = "UID Barcode",
+            modifier = modifier,
+            contentScale = ContentScale.FillBounds
+        )
+    } else {
+        Box(
+            modifier = modifier.background(Color(0x11000000))
+        )
     }
 }
