@@ -56,9 +56,20 @@ object NotificationCenter {
     private val pushedKeys = mutableSetOf<String>()
 
     fun setAll(list: List<InAppNotification>) {
-        _notifications.value = list
+        val localMap = _notifications.value.associateBy { it.id }
+
+        val merged = list.map { remote ->
+            val local = localMap[remote.id]
+            if (local == null) remote
+            else remote.copy(
+                isRead = remote.isRead || local.isRead,
+                dismissed = remote.dismissed || local.dismissed
+            )
+        }
+
+        _notifications.value = merged
         pushedKeys.clear()
-        pushedKeys.addAll(list.mapNotNull { it.key.ifBlank { null } })
+        pushedKeys.addAll(merged.mapNotNull { it.key.ifBlank { null } })
     }
 
     fun pushOnce(
@@ -400,8 +411,13 @@ private fun NotificationBubble(
             .background(bg)
             .clickable {
                 if (!n.isRead) {
+                    // update UI instantl
                     NotificationCenter.markRead(n.id)
-                    scope.launch { firebaseHelper.markNotificationRead(userId, n.id) }
+
+                    // persist to Firestore
+                    scope.launch {
+                        firebaseHelper.markNotificationRead(userId, n.id)
+                    }
                 }
             }
             .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -476,7 +492,6 @@ private fun DismissibleNotificationItem(
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
-            // ✅ background only (no "Clear" label)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

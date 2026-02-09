@@ -127,16 +127,27 @@ fun TaskListScreenContent(
 
     var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
     val scope = rememberCoroutineScope()
-
+    var notifsSynced by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
     val context = LocalContext.current
 
-    //val tasksByHour = groupTasksByHour(tasks)
     LaunchedEffect(userId) {
+        if (userId.isBlank()) return@LaunchedEffect
+
+        val remoteNotifs = firebaseHelper.getNotifications(userId)
+        NotificationCenter.setAll(remoteNotifs)
+        notifsSynced = true
+
+        // load tasks after
         tasks = firebaseHelper.getTasks(userId)
     }
 
-    LaunchedEffect(tasks) {
+    //  Only run reminders after notifications are synced + tasks are loaded
+    LaunchedEffect(notifsSynced, tasks) {
+        if (!notifsSynced) return@LaunchedEffect
+        if (userId.isBlank()) return@LaunchedEffect
+        if (tasks.isEmpty()) return@LaunchedEffect
+
         TaskReminder.run(context, firebaseHelper, userId, tasks)
     }
 
@@ -170,7 +181,8 @@ fun TaskListScreenContent(
             },
             onEditTask = { task ->
                 editingTask = task
-            }
+            },
+            notifsSynced = notifsSynced
         )
     }
 
@@ -270,6 +282,7 @@ fun TaskListUI(
     onEditTask: (Task) -> Unit,
     userId: String,
     onOpenNotifications: () -> Unit,
+    notifsSynced: Boolean,
     modifier: Modifier = Modifier
 ) {
 
@@ -299,25 +312,21 @@ fun TaskListUI(
     Scaffold(
         topBar = {
             val allNotifs by NotificationCenter.notifications.collectAsState()
-            val unread = NotificationCenter.unreadCount(userId)
+            val unread = allNotifs.count { it.userId == userId && !it.isRead && !it.dismissed }
             TopAppBar(
                 title = { Text("Tasks") },
                 actions = {
                     IconButton(onClick = onOpenNotifications) {
                         BadgedBox(
                             badge = {
-                                if (unread > 0) {
+                                if (notifsSynced && unread > 0) {
                                     Badge { Text(unread.toString()) }
                                 }
                             }
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Notifications"
-                            )
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications")
                         }
                     }
-
                 }
             )
         },
