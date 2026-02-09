@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -368,26 +369,136 @@ fun StudentCalendarScreen(
 
     //  show full details of task
     selectedTask?.let { task ->
+
         val taskCategory = runCatching { TaskCategory.valueOf(task.category) }
             .getOrElse { TaskCategory.PERSONAL }
 
+        val catColor = when (taskCategory) {
+            TaskCategory.CLASS -> MaterialTheme.colorScheme.primary
+            TaskCategory.EXAM -> MaterialTheme.colorScheme.error
+            TaskCategory.CCA -> MaterialTheme.colorScheme.tertiary
+            TaskCategory.PERSONAL -> MaterialTheme.colorScheme.secondary
+        }
+
         AlertDialog(
             onDismissRequest = { selectedTask = null },
-            confirmButton = {
-                TextButton(onClick = { selectedTask = null }) {
-                    Text("Close")
+
+            title = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    // category chip style
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(catColor.copy(alpha = 0.12f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(catColor)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = taskCategory.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = catColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             },
-            title = { Text(task.title, fontWeight = FontWeight.Bold) },
+
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Time: ${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}")
-                    Text("Category: ${taskCategory.label}")
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (task.description.isNotBlank()) task.description else "No description provided.",
-                        fontSize = 14.sp
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                    // time row
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .padding(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = "${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // description box
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = "Description",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = task.description.takeIf { it.isNotBlank() }
+                                ?: "No description provided.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            },
+
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+
+                    // Edit (optional)
+                    TextButton(
+                        onClick = {
+                            selectedTask = null
+                            editingTask = task
+                        }
+                    ) {
+                        Text("Edit")
+                    }
+
+                    // Close
+                    TextButton(onClick = { selectedTask = null }) {
+                        Text("Close")
+                    }
+                }
+            },
+
+            dismissButton = {
+                // Delete (optional) – remove if you don’t want delete here
+                TextButton(
+                    onClick = {
+                        // you already have scope + firebaseHelper + userId + allTasks in your screen
+                        scope.launch {
+                            firebaseHelper.deleteTask(userId, task.id)
+                            allTasks = firebaseHelper.getTasks(userId)
+                            selectedTask = null
+                        }
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             }
         )
