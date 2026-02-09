@@ -13,13 +13,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,20 +35,32 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
+import java.time.LocalDate
 import com.journeyapps.barcodescanner.BarcodeEncoder
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun HomeScreenContent(
     user: UserData,
+    firebaseHelper: FirebaseHelper,
     onTaskClick: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenStudentCard: () -> Unit
 ) {
-
-    // User's Data + Fallback
     val displayName = user.username.ifBlank { "User" }
     val studentId = user.studentId.ifBlank { "No Student ID" }
     val uid = user.uid.ifBlank { "No UID" }
+
+    // Emily: Date state for < Today >
+    var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+
+    // Emily: load tasks
+    var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
+
+    LaunchedEffect(uid) {
+        if (uid.isBlank() || uid == "No UID") return@LaunchedEffect
+        tasks = firebaseHelper.getTasks(uid)
+    }
 
     LazyColumn(
         modifier = modifier
@@ -59,9 +75,22 @@ fun HomeScreenContent(
             )
         }
 
-        item { TodayRow() }
+        item {
+            TodayRow(
+                selectedDate = selectedDate,
+                onPrevious = { selectedDate = selectedDate.minusDays(1) },
+                onNext = { selectedDate = selectedDate.plusDays(1) }
+            )
+        }
 
-        item { ScheduleCard() }
+        // Emily: Schedule shows tasks for selectedDate
+        item {
+            ScheduleCard(
+                selectedDate = selectedDate,
+                tasks = tasks,
+                onTaskClick = onTaskClick
+            )
+        }
 
         item {
             Text(
@@ -119,25 +148,43 @@ private fun HeaderRow(
 }
 
 @Composable
-private fun TodayRow() {
+private fun TodayRow(
+    selectedDate: LocalDate,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    val today = LocalDate.now()
+
+    val label = when (selectedDate) {
+        today -> "Today"
+        today.minusDays(1) -> "Yesterday"
+        today.plusDays(1) -> "Tomorrow"
+        else -> selectedDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
+
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-            contentDescription = "Previous day"
+            imageVector = Icons.Default.KeyboardArrowLeft,
+            contentDescription = "Previous day",
+            modifier = Modifier.clickable { onPrevious() }
         )
+
         Text(
-            text = "Today",
+            text = label,
             modifier = Modifier.padding(horizontal = 10.dp),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
+
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "Next day"
+            imageVector = Icons.Default.KeyboardArrowRight,
+            contentDescription = "Next day",
+            modifier = Modifier.clickable { onNext() }
         )
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -151,23 +198,84 @@ private fun TodayRow() {
 
 @Composable
 private fun ScheduleCard(
+    selectedDate: LocalDate,
+    tasks: List<Task>,
+    onTaskClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val selectedDateString = selectedDate.toString() // "YYYY-MM-DD"
+
+    val tasksForDate = tasks
+        .filter { it.date == selectedDateString }
+        .sortedBy { it.startTime }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 320.dp),
+            .heightIn(min = 200.dp)
+            .clickable { onTaskClick() },
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5F6FA)
-        )
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F6FA))
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp)
-        )
+        ) {
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (tasksForDate.isEmpty()) {
+                Text(
+                    text = "No tasks for this day",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0x88000000)
+                )
+            } else {
+                tasksForDate.take(4).forEach { task ->
+                    TaskRowItem(
+                        title = task.title,
+                        timeRange = "${task.startTime} – ${task.endTime}"
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (tasksForDate.size > 4) {
+                    Text(
+                        text = "+ ${tasksForDate.size - 4} more",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0x88000000)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskRowItem(
+    title: String,
+    timeRange: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = timeRange,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0x88000000)
+            )
+        }
     }
 }
 

@@ -151,6 +151,7 @@ fun MAD25_T01_Team2_NPAL2App(
                     AppDestinations.HOME ->
                         HomeScreenContent(
                             user = user,
+                            firebaseHelper = firebaseHelper,
                             onOpenStudentCard = { currentDestination = AppDestinations.STUDENT_CARD },
                             onTaskClick = { currentDestination = AppDestinations.TASKS },
                             modifier = Modifier.padding(innerPadding)
