@@ -25,7 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.delay
 
 @Composable
 fun MAD25_T01_Team2_NPAL2App(
@@ -35,7 +35,6 @@ fun MAD25_T01_Team2_NPAL2App(
     var isDarkMode by rememberSaveable {
         mutableStateOf(ThemePrefs.loadDarkMode(context))
     }
-
     val colorScheme = if (isDarkMode) {
         darkColorScheme()
     } else {
@@ -47,9 +46,6 @@ fun MAD25_T01_Team2_NPAL2App(
 
     val currentUser = FirebaseAuth.getInstance().currentUser
     val currentUserId = currentUser?.uid ?: ""
-
-    // ✅ Emily: user profile state (Firestore)
-    var user by rememberSaveable { mutableStateOf(UserData(uid = currentUserId)) }
 
     var showNotifications by rememberSaveable { mutableStateOf(false) }
     var settingsSubScreen by rememberSaveable { mutableStateOf<SettingsSubScreen?>(null) }
@@ -68,47 +64,29 @@ fun MAD25_T01_Team2_NPAL2App(
         } catch (e: Exception) {
             android.util.Log.e("TaskReminder", "run failed", e)
         }
-
-        // ✅ Emily: fetch user profile from Firestore
-        FirebaseFirestore.getInstance()
-            .collection("users")
-            .document(currentUserId)
-            .get()
-            .addOnSuccessListener { doc ->
-                user = UserData(
-                    username = doc.getString("username") ?: "",
-                    email = doc.getString("email") ?: (currentUser?.email ?: ""),
-                    studentId = doc.getString("studentId") ?: "",
-                    uid = doc.getString("uid") ?: currentUserId
-                )
-            }
-            .addOnFailureListener { e ->
-                android.util.Log.e("UserData", "Failed to load user profile", e)
-            }
     }
-
-    MaterialTheme(colorScheme = colorScheme) {
+    MaterialTheme(
+        colorScheme = colorScheme
+    ) {
         NavigationSuiteScaffold(
             navigationSuiteItems = {
-                AppDestinations.entries
-                    .filter { it.showInNav } // hides Student Card from navbar
-                    .forEach { dest ->
-                        item(
-                            icon = { Icon(dest.icon, contentDescription = dest.label) },
-                            label = { Text(dest.label) },
-                            selected = dest == currentDestination,
-                            onClick = {
-                                showNotifications = false
-                                settingsSubScreen = null
-                                currentDestination = dest
-                            }
-                        )
-                    }
+                AppDestinations.entries.forEach { dest ->
+                    item(
+                        icon = { Icon(dest.icon, contentDescription = dest.label) },
+                        label = { Text(dest.label) },
+                        selected = dest == currentDestination,
+                        onClick = {
+                            showNotifications = false
+                            settingsSubScreen = null
+                            currentDestination = dest
+                        }
+                    )
+                }
             }
         ) {
             Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 
-                // ⭐ Settings Sub-Screens
+                //  Settings subscreens
                 settingsSubScreen?.let { subScreen ->
                     when (subScreen) {
                         SettingsSubScreen.NOTIFICATIONS ->
@@ -133,7 +111,7 @@ fun MAD25_T01_Team2_NPAL2App(
                     return@Scaffold
                 }
 
-                // ⭐ Full-Screen Notifications Screen
+                //  Fullscreen notifications screen
                 if (showNotifications) {
                     NotificationsScreen(
                         firebaseHelper = firebaseHelper,
@@ -143,12 +121,10 @@ fun MAD25_T01_Team2_NPAL2App(
                     return@Scaffold
                 }
 
-                // ⭐ Navigation Content
+                // Main navigation content
                 when (currentDestination) {
                     AppDestinations.HOME ->
                         HomeScreenContent(
-                            user = user,
-                            onOpenStudentCard = { currentDestination = AppDestinations.STUDENT_CARD },
                             onTaskClick = { currentDestination = AppDestinations.TASKS },
                             modifier = Modifier.padding(innerPadding)
                         )
@@ -191,11 +167,6 @@ fun MAD25_T01_Team2_NPAL2App(
                             modifier = Modifier.padding(innerPadding)
                         )
 
-                    AppDestinations.STUDENT_CARD ->
-                        StudentCardScreen(
-                            user = user,
-                            onBack = { currentDestination = AppDestinations.HOME }
-                        )
                 }
             }
         }
@@ -205,17 +176,13 @@ fun MAD25_T01_Team2_NPAL2App(
 enum class AppDestinations(
     val label: String,
     val icon: ImageVector,
-    val showInNav: Boolean = true
 ) {
     HOME("Home", Icons.Default.Home),
     TASKS("Tasks", Icons.Default.DateRange),
     CREATE_TASKS("Add Task", Icons.Default.AddCircle),
     CALENDAR("Calendar", Icons.Default.DateRange),
     MAP(" Map", Icons.Default.Place),
-    SETTINGS("Settings", Icons.Default.Settings),
-
-    // ✅ hidden from navbar
-    STUDENT_CARD("Student Card", Icons.Default.AddCircle, false)
+    SETTINGS("Settings", Icons.Default.Settings)
 }
 
 enum class SettingsSubScreen {

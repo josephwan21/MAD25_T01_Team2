@@ -1,9 +1,9 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
+import android.R.attr.bottom
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,14 +26,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.collections.forEachIndexed
+import kotlin.collections.lastIndex
+import java.time.LocalDate
 
 @Composable
 fun HomeScreenContent(
-    user: UserData,
     onTaskClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    onOpenStudentCard: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     // hard coded user's name
     val displayName = "Ben"
@@ -72,8 +75,7 @@ fun HomeScreenContent(
                 name = "Ben",
                 course = "ICT",
                 studentId = "S12345678B",
-                validFrom = "04/2021",
-                onClick = onOpenStudentCard
+                validFrom = "04/2021"
             )
         }
     }
@@ -170,13 +172,10 @@ private fun StudentCard(
     name: String,
     course: String,
     studentId: String,
-    validFrom: String,
-    onClick: () -> Unit
+    validFrom: String
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
