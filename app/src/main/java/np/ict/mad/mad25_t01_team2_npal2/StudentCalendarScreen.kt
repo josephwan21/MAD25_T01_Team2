@@ -11,10 +11,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 data class CalendarTask(
@@ -50,11 +55,31 @@ fun StudentCalendarScreen(
         31, 30, 31, 31,
         30, 31, 30, 31
     )
-
+    var allTasks by remember { mutableStateOf<List<Task>>(emptyList()) }
     val todayCal = remember { Calendar.getInstance() }
     val todayYear = todayCal.get(Calendar.YEAR)
     val todayMonth = todayCal.get(Calendar.MONTH)
+
     val todayDay = todayCal.get(Calendar.DAY_OF_MONTH)
+    val scope = rememberCoroutineScope()
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
+    var editingTask by remember { mutableStateOf<Task?>(null) }
+
+    if (editingTask != null) {
+        EditTaskScreen(
+            task = editingTask!!,
+            onBack = { editingTask = null },
+            onTaskUpdated = {
+                scope.launch {
+                    allTasks = firebaseHelper.getTasks(userId) // refresh calendar
+                    editingTask = null
+                }
+            },
+            firebaseHelper = firebaseHelper,
+            userId = userId
+        )
+        return
+    }
 
     var year by remember { mutableStateOf(todayYear) }
     var monthIndex by remember { mutableStateOf(todayMonth) }
@@ -65,7 +90,6 @@ fun StudentCalendarScreen(
 
     val monthLabel = "${monthNames[monthIndex]}, $year"
 
-    var allTasks by remember { mutableStateOf<List<Task>>(emptyList()) }
 
     LaunchedEffect(userId) {
         allTasks = firebaseHelper.getTasks(userId)
@@ -83,8 +107,6 @@ fun StudentCalendarScreen(
     val tasksForSelectedDay: List<Task> =
         tasksMap[Triple(year, monthIndex, selectedDay)] ?: emptyList()
 
-    // Selected task for dialog
-    var selectedTask by remember { mutableStateOf<Task?>(null) }
 
     Column(
         modifier = Modifier
@@ -263,42 +285,83 @@ fun StudentCalendarScreen(
                         TaskCategory.PERSONAL -> MaterialTheme.colorScheme.secondary
                     }
 
+                    var menuExpanded by remember { mutableStateOf(false) }
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(
-                                width = 2.dp,
-                                color = borderColor,
-                                shape = RoundedCornerShape(12.dp)
-                            )
+                            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
                             .clickable { selectedTask = task },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
                         )
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = task.title,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
 
-                            Text(
-                                text = task.title,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
+                                Text(
+                                    text = "${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
+                                    fontSize = 12.sp
+                                )
 
-                            Text(
-                                text = "${formatTo12Hour(task.startTime)} – ${formatTo12Hour(task.endTime)}",
-                                fontSize = 12.sp
-                            )
+                                Text(
+                                    text = taskCategory.label,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = borderColor
+                                )
+                            }
 
-                            Text(
-                                text = taskCategory.label,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = borderColor
-                            )
+                            // 3-dot menu
+                            Box {
+                                IconButton(onClick = { menuExpanded = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "Task options"
+                                    )
+                                }
+
+                                DropdownMenu(
+                                    expanded = menuExpanded,
+                                    onDismissRequest = { menuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Edit") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            editingTask = task // go to EditTaskScreen
+                                        }
+                                    )
+
+                                    DropdownMenuItem(
+                                        text = { Text("Delete") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            scope.launch {
+                                                firebaseHelper.deleteTask(userId, task.id)
+                                                allTasks = firebaseHelper.getTasks(userId) // refresh calendar
+                                                selectedTask = null
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
+
             }
         }
     }
