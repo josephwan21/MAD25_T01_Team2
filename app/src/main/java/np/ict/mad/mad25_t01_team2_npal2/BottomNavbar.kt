@@ -163,7 +163,7 @@ enum class AppDestinations(
     TASKS("Tasks", Icons.Default.DateRange),
     CREATE_TASKS("Add Task", Icons.Default.AddCircle),
     CALENDAR("Calendar", Icons.Default.DateRange),
-    MAP("School Map", Icons.Default.Place),
+    MAP(" Map", Icons.Default.Place),
     SETTINGS("Settings", Icons.Default.Settings)
 }
 

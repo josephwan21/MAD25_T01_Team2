@@ -66,6 +66,7 @@ import kotlin.math.abs
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.rememberCoroutineScope
 
 data class GpsCoordinates(val latitude: Double, val longitude: Double)
 
@@ -201,6 +202,7 @@ fun LocationDashboard(
 ) {
     val firebaseHelper = remember { FirebaseHelper() }
     val currentUserId = firebaseHelper.getCurrentUserId()
+    val scope = rememberCoroutineScope() //resets contents when User navigates away
 
     var userRating by remember { mutableIntStateOf(0) }
     var feedbackText by remember { mutableStateOf("") }
@@ -208,14 +210,33 @@ fun LocationDashboard(
     var showErrorMessage by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
     var existingFeedback by remember { mutableStateOf<LocationFeedback?>(null) }
+    var allFeedback by remember { mutableStateOf<List<LocationFeedback>>(emptyList()) }
+    var averageRating by remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(region.name, currentUserId) {
+    LaunchedEffect(region.name) {
+        // Reset all states
+        userRating = 0
+        feedbackText = ""
+        showSuccessMessage = false
+        showErrorMessage = false
+        isSubmitting = false
+        existingFeedback = null
+        allFeedback = emptyList()
+        averageRating = 0f
+
         if (currentUserId != null) {
             existingFeedback = firebaseHelper.getUserFeedbackForLocation(currentUserId, region.name)
             existingFeedback?.let {
                 userRating = it.rating
                 feedbackText = it.comment
             }
+        }
+
+        allFeedback = firebaseHelper.getLocationFeedback(region.name)
+        averageRating = if (allFeedback.isEmpty()) {
+            0f
+        } else {
+            allFeedback.map { it.rating }.average().toFloat()
         }
     }
 
@@ -231,9 +252,7 @@ fun LocationDashboard(
             )
             .padding(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(3.dp, region.backgroundColor.darken())
     ) {
         Column(
@@ -241,6 +260,7 @@ fun LocationDashboard(
                 .fillMaxSize()
                 .padding(20.dp)
         ) {
+            // Header section
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -253,12 +273,9 @@ fun LocationDashboard(
                     .padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Colored icon representing the location
                 Card(
                     modifier = Modifier.size(60.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = region.backgroundColor
-                    ),
+                    colors = CardDefaults.cardColors(containerColor = region.backgroundColor),
                     elevation = CardDefaults.cardElevation(4.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -284,7 +301,25 @@ fun LocationDashboard(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF37474F)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    // Show average rating if available
+                    if (allFeedback.isNotEmpty()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = String.format("%.1f", averageRating) + " (${allFeedback.size} reviews)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF546E7A)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     Text(
                         text = region.description,
                         style = MaterialTheme.typography.bodyMedium,
@@ -300,8 +335,10 @@ fun LocationDashboard(
                         .verticalScroll(rememberScrollState())
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
+
+                    // Your Rating Section
                     Text(
-                        text = if (existingFeedback != null) "Update your feedback:" else "Leave feedback:",
+                        text = if (existingFeedback != null) "Update Your Rating:" else "Rate This Location:",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF37474F)
@@ -318,7 +355,7 @@ fun LocationDashboard(
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = if (existingFeedback != null) "Update your feedback:" else "Leave feedback:",
+                        text = if (existingFeedback != null) "Update Your Comment:" else "Leave a Comment:",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF37474F)
@@ -335,10 +372,7 @@ fun LocationDashboard(
                             .fillMaxWidth()
                             .height(120.dp),
                         placeholder = {
-                            Text(
-                                "Share your experience...",
-                                color = Color(0xFF90A4AE)
-                            )
+                            Text("Share your experience...", color = Color(0xFF90A4AE))
                         },
                         maxLines = 5,
                         enabled = !isSubmitting,
@@ -356,7 +390,7 @@ fun LocationDashboard(
                         onClick = {
                             if (currentUserId != null && userRating > 0) {
                                 isSubmitting = true
-                                kotlinx.coroutines.GlobalScope.launch {
+                                scope.launch {
                                     val success = if (existingFeedback != null) {
                                         firebaseHelper.updateLocationFeedback(
                                             existingFeedback!!.id,
@@ -377,10 +411,17 @@ fun LocationDashboard(
                                     if (success) {
                                         showSuccessMessage = true
                                         showErrorMessage = false
+                                        // Reload feedback
                                         existingFeedback = firebaseHelper.getUserFeedbackForLocation(
                                             currentUserId,
                                             region.name
                                         )
+                                        allFeedback = firebaseHelper.getLocationFeedback(region.name)
+                                        averageRating = if (allFeedback.isEmpty()) {
+                                            0f
+                                        } else {
+                                            allFeedback.map { it.rating }.average().toFloat()
+                                        }
                                     } else {
                                         showErrorMessage = true
                                         showSuccessMessage = false
@@ -391,8 +432,8 @@ fun LocationDashboard(
                         modifier = Modifier.align(Alignment.End),
                         enabled = userRating > 0 && !isSubmitting && currentUserId != null,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFDD835), // Golden yellow
-                            contentColor = Color(0xFF37474F) // Dark text
+                            containerColor = Color(0xFFFDD835),
+                            contentColor = Color(0xFF37474F)
                         ),
                         elevation = ButtonDefaults.buttonElevation(
                             defaultElevation = 4.dp,
@@ -401,7 +442,11 @@ fun LocationDashboard(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = if (isSubmitting) "Submitting..." else if (existingFeedback != null) "Update Feedback" else "Submit Feedback",
+                            text = when {
+                                isSubmitting -> "Submitting..."
+                                existingFeedback != null -> "Update Feedback"
+                                else -> "Submit Feedback"
+                            },
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -409,7 +454,8 @@ fun LocationDashboard(
                     if (showSuccessMessage) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = if (existingFeedback != null) "✓ Feedback updated successfully!" else "✓ Thank you for your feedback!",
+                            text = "✓ " + if (existingFeedback != null)
+                                "Feedback updated successfully!" else "Thank you for your feedback!",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFF4CAF50),
                             fontWeight = FontWeight.Bold
