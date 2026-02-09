@@ -89,9 +89,11 @@ fun StudentCalendarScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()          //  pushes below camera/status bar
             .padding(horizontal = 16.dp)
+            .padding(top = 0.dp)          // small extra breathing space
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
+
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -144,7 +146,7 @@ fun StudentCalendarScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -231,7 +233,8 @@ fun StudentCalendarScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
 
         Text(
             text = "Tasks for $selectedDay $monthLabel",

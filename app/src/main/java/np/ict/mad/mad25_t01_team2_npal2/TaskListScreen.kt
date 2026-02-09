@@ -74,6 +74,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.api.Context
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import np.ict.mad.mad25_t01_team2_npal2.ui.theme.MAD25_T01_Team2_NPAL2Theme
 import java.text.SimpleDateFormat
@@ -122,26 +123,8 @@ fun TaskListScreenContent(
     modifier: Modifier = Modifier
 ) {
 
-    /*val monthYear = "December 2025"
 
-    val days = listOf(
-        "Mon" to 17,
-        "Tue" to 18,
-        "Wed" to 19,
-        "Thu" to 20,
-        "Fri" to 21,
-        "Sat" to 22,
-        "Sun" to 23
-    )*/
 
-    val times = (10..20).toList() // 10 AM to 8 PM
-
-    // Dummy tasks mapped to specific times
-    /*val tasks = mapOf(
-        10 to "Complete Project Proposal",
-        13 to "Review DDV Assignment",
-        16 to "Consultation with Lecturer"
-    )*/
     var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
     val scope = rememberCoroutineScope()
 
@@ -151,9 +134,11 @@ fun TaskListScreenContent(
     //val tasksByHour = groupTasksByHour(tasks)
     LaunchedEffect(userId) {
         tasks = firebaseHelper.getTasks(userId)
-        TaskReminder.run(context, firebaseHelper, userId, tasks)
     }
 
+    LaunchedEffect(tasks) {
+        TaskReminder.run(context, firebaseHelper, userId, tasks)
+    }
 
 
     if (editingTask != null) {
@@ -353,6 +338,7 @@ fun TaskListUI(
             Text(
                 text = monthYear,
                 style = MaterialTheme.typography.headlineMedium
+
             )
 
             Spacer(Modifier.height(16.dp))
