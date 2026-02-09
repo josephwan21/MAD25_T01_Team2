@@ -85,13 +85,15 @@ class FirebaseHelper {
 
     suspend fun signIn(usernameOrEmail: String, password: String): Boolean {
         return try {
-            val email = if (usernameOrEmail.contains("@")) {
-                usernameOrEmail
+            val identifier = usernameOrEmail.lowercase()
+
+            val email = if (identifier.contains("@")) {
+                identifier
             } else {
                 val usersRef = db.collection("users")
 
                 var querySnapshot = usersRef
-                    .whereEqualTo("username", usernameOrEmail)
+                    .whereEqualTo("username", identifier)
                     .get()
                     .await()
 
@@ -99,7 +101,7 @@ class FirebaseHelper {
 
                 if (userDoc == null) {
                     querySnapshot = usersRef
-                        .whereEqualTo("studentId", usernameOrEmail)
+                        .whereEqualTo("studentId", identifier)
                         .get()
                         .await()
                     userDoc = querySnapshot.documents.firstOrNull()
@@ -122,7 +124,8 @@ class FirebaseHelper {
     }
     suspend fun signUp(username: String, password: String): Boolean {
         return try {
-            val email = toEmail(username)
+            val normalizedUsername = username.lowercase()
+            val email = toEmail(normalizedUsername)
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val user = result.user ?: return false
             createUserProfile(user)
@@ -150,7 +153,7 @@ class FirebaseHelper {
         return try {
             db.collection("users")
                 .document(user.uid)
-                .update("username", newUsername)
+                .update("username", newUsername.lowercase())
                 .await()
             true
         } catch (e: Exception) {
