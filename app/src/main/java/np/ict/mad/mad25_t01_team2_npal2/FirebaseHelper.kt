@@ -287,41 +287,43 @@ class FirebaseHelper {
 
     suspend fun getNotifications(userId: String, limit: Long = 50): List<InAppNotification> {
         return try {
-            val snap = db.collection("users")
+            val snap = FirebaseFirestore.getInstance()
+                .collection("users")
                 .document(userId)
                 .collection("notifications")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(limit)
                 .get()
                 .await()
 
-            snap.documents.mapNotNull { it.toObject(InAppNotification::class.java) }
+            snap.documents.mapNotNull { doc ->
+                val base = doc.toObject(InAppNotification::class.java) ?: return@mapNotNull null
+
+                val isReadFixed =
+                    doc.getBoolean("isRead")
+                        ?: doc.getBoolean("read")
+                        ?: base.isRead
+
+                val dismissedFixed =
+                    doc.getBoolean("dismissed") ?: base.dismissed
+
+                base.copy(
+                    id = doc.id,
+                    key = base.key.ifBlank { doc.id },   // keep key sane
+                    userId = userId,
+                    isRead = isReadFixed,
+                    dismissed = dismissedFixed
+                )
+            }
         } catch (e: Exception) {
             Log.e("FirebaseHelper", "Get notifications failed", e)
             emptyList()
         }
     }
 
-    suspend fun deleteAllNotifications(userId: String): Boolean {
-        return try {
-            val snap = db.collection("users")
-                .document(userId)
-                .collection("notifications")
-                .get()
-                .await()
-
-            val batch = db.batch()
-            snap.documents.forEach { doc -> batch.delete(doc.reference) }
-            batch.commit().await()
-            true
-        } catch (e: Exception) {
-            Log.e("FirebaseHelper", "Delete all notifications failed", e)
-            false
-        }
-    }
-
     suspend fun markAllNotificationsRead(userId: String): Boolean {
         return try {
+            val db = FirebaseFirestore.getInstance()
             val snap = db.collection("users")
                 .document(userId)
                 .collection("notifications")
@@ -330,7 +332,10 @@ class FirebaseHelper {
 
             val batch = db.batch()
             snap.documents.forEach { doc ->
-                batch.update(doc.reference, "isRead", true)
+                batch.update(doc.reference, mapOf(
+                    "isRead" to true,
+                    "read" to true
+                ))
             }
             batch.commit().await()
             true
@@ -339,6 +344,52 @@ class FirebaseHelper {
             false
         }
     }
+
+    suspend fun dismissNotification(userId: String, notifId: String): Boolean {
+        return try {
+            db.collection("users")
+                .document(userId)
+                .collection("notifications")
+                .document(notifId)
+                .update(
+                    mapOf(
+                        "dismissed" to true,
+                        "isRead" to true,
+                        "read" to true
+                    )
+                )
+                .await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Dismiss notification failed", e)
+            false
+        }
+    }
+
+
+    suspend fun markNotificationRead(userId: String, notifId: String): Boolean {
+        return try {
+            db.collection("users")
+                .document(userId)
+                .collection("notifications")
+                .document(notifId)
+                .update(
+                    mapOf(
+                        "isRead" to true,
+                        "read" to true
+                    )
+                )
+                .await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Mark notification read failed", e)
+            false
+        }
+    }
+
+
+
+
     //School Map Function
     fun getCurrentUserId(): String? {
         return auth.currentUser?.uid

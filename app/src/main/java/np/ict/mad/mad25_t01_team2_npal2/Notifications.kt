@@ -31,10 +31,7 @@ import java.util.Locale
 
 /* -------------------- DATA -------------------- */
 
-enum class NotificationKind {
-    GENERIC,
-    OVERDUE
-}
+enum class NotificationKind { GENERIC, OVERDUE }
 
 data class InAppNotification(
     val id: String = "",
@@ -45,7 +42,8 @@ data class InAppNotification(
     val timestamp: Long = System.currentTimeMillis(),
     val isRead: Boolean = false,
     val kind: NotificationKind = NotificationKind.GENERIC,
-    val taskCategory: String? = null
+    val taskCategory: String? = null,
+    val dismissed: Boolean = false
 )
 
 /* -------------------- CENTER -------------------- */
@@ -57,23 +55,10 @@ object NotificationCenter {
 
     private val pushedKeys = mutableSetOf<String>()
 
-    private var suppressPushUntil: Long = 0L
-
-    fun suppressPushesFor(ms: Long) {
-        suppressPushUntil = System.currentTimeMillis() + ms
-    }
-
     fun setAll(list: List<InAppNotification>) {
         _notifications.value = list
         pushedKeys.clear()
         pushedKeys.addAll(list.mapNotNull { it.key.ifBlank { null } })
-    }
-
-    fun clearAll(userId: String) {
-        _notifications.value = _notifications.value.filterNot { it.userId == userId }
-        // rebuild pushedKeys from whatever remains (other users)
-        pushedKeys.clear()
-        pushedKeys.addAll(_notifications.value.mapNotNull { it.key.ifBlank { null } })
     }
 
     fun pushOnce(
@@ -87,14 +72,14 @@ object NotificationCenter {
         kind: NotificationKind = NotificationKind.GENERIC,
         taskCategory: String? = null
     ) {
-
         if (!isNotificationsEnabled(context)) return
-
-
-        if (System.currentTimeMillis() < suppressPushUntil) return
-
-
         if (key.isBlank()) return
+
+        val alreadyDismissed = _notifications.value.any {
+            (it.id == key || it.key == key) && it.dismissed
+        }
+        if (alreadyDismissed) return
+
 
         // prevent duplicates
         if (pushedKeys.contains(key)) return
@@ -111,7 +96,8 @@ object NotificationCenter {
             timestamp = timestamp,
             isRead = false,
             kind = kind,
-            taskCategory = taskCategory
+            taskCategory = taskCategory,
+            dismissed = false
         )
 
         _notifications.value = listOf(n) + _notifications.value
@@ -133,10 +119,25 @@ object NotificationCenter {
         }
     }
 
+    fun dismiss(id: String) {
+        val item = _notifications.value.firstOrNull { it.id == id }
+        if (item != null && item.key.isNotBlank()) {
+            pushedKeys.add(item.key) // extra
+        }
+
+        _notifications.value = _notifications.value.map {
+            if (it.id == id) it.copy(dismissed = true) else it
+        }
+    }
+
+
     fun unreadCount(userId: String): Int {
-        return _notifications.value.count { it.userId == userId && !it.isRead }
+        return _notifications.value.count {
+            it.userId == userId && !it.isRead && !it.dismissed
+        }
     }
 }
+
 /* -------------------- HELPERS -------------------- */
 
 fun startOfTodayMillis(): Long {
@@ -150,7 +151,6 @@ fun startOfTodayMillis(): Long {
 
 fun timeAgo(timestamp: Long): String {
     val diff = (System.currentTimeMillis() - timestamp).coerceAtLeast(0)
-
     val seconds = diff / 1000
     val minutes = seconds / 60
     val hours = minutes / 60
@@ -165,12 +165,15 @@ fun timeAgo(timestamp: Long): String {
 
 fun cleanStartsMessage(msg: String): String {
     return msg
-        .removePrefix("Starts in 1 hour • ")
-        .removePrefix("Starts in 1 hour · ")
-        .removePrefix("Starts in 1 hour - ")
-        .removePrefix("Starts in 1 hour ")
+        .replace("Starts in 1 hour", "")
+        .replace("Starts at", "")
+        .replace("•", "")
+        .replace("·", "")
+        .replace("-", "")
         .trim()
 }
+
+
 
 /* -------------------- SCREEN -------------------- */
 
@@ -203,7 +206,7 @@ fun NotificationsScreen(
     val yesterdayStart = todayStart - 24L * 60L * 60L * 1000L
 
     val userNotifications = all
-        .filter { it.userId == userId }
+        .filter { it.userId == userId && !it.dismissed }
         .sortedByDescending { it.timestamp }
 
     val todayList = userNotifications.filter { it.timestamp >= todayStart }
@@ -228,19 +231,6 @@ fun NotificationsScreen(
                             scope.launch { firebaseHelper.markAllNotificationsRead(userId) }
                         }
                     ) { Text("Mark all read") }
-
-                    TextButton(
-                        enabled = userNotifications.isNotEmpty(),
-                        onClick = {
-                            scope.launch {
-                                val ok = firebaseHelper.deleteAllNotifications(userId)
-                                if (ok) {
-                                    NotificationCenter.clearAll(userId)
-                                    NotificationCenter.suppressPushesFor(10_000)
-                                }
-                            }
-                        }
-                    ) { Text("Clear") }
                 }
             )
         }
@@ -310,14 +300,24 @@ fun NotificationsScreen(
                     if (todayList.isNotEmpty()) {
                         item { SectionHeader("Today") }
                         items(todayList, key = { it.id }) { n ->
-                            NotificationBubble(n, showStartsLabel = true)
+                            DismissibleNotificationItem(
+                                n = n,
+                                showStartsLabel = true,
+                                firebaseHelper = firebaseHelper,
+                                userId = userId
+                            )
                         }
                     }
 
                     if (yesterdayList.isNotEmpty()) {
                         item { SectionHeader("Yesterday") }
                         items(yesterdayList, key = { it.id }) { n ->
-                            NotificationBubble(n, showStartsLabel = false)
+                            DismissibleNotificationItem(
+                                n = n,
+                                showStartsLabel = false,
+                                firebaseHelper = firebaseHelper,
+                                userId = userId
+                            )
                         }
                     }
 
@@ -342,7 +342,12 @@ fun NotificationsScreen(
 
                         if (showEarlier) {
                             items(earlierList, key = { it.id }) { n ->
-                                NotificationBubble(n, showStartsLabel = false)
+                                DismissibleNotificationItem(
+                                    n = n,
+                                    showStartsLabel = false,
+                                    firebaseHelper = firebaseHelper,
+                                    userId = userId
+                                )
                             }
                         }
                     }
@@ -351,13 +356,18 @@ fun NotificationsScreen(
         }
     }
 }
+
 /* -------------------- UI -------------------- */
 
 @Composable
 private fun NotificationBubble(
     n: InAppNotification,
-    showStartsLabel: Boolean
+    showStartsLabel: Boolean,
+    firebaseHelper: FirebaseHelper,
+    userId: String
 ) {
+    val scope = rememberCoroutineScope()
+
     val bg = if (n.isRead)
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     else
@@ -371,11 +381,15 @@ private fun NotificationBubble(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(bg)
-            .clickable { NotificationCenter.markRead(n.id) }
+            .clickable {
+                if (!n.isRead) {
+                    NotificationCenter.markRead(n.id)
+                    scope.launch { firebaseHelper.markNotificationRead(userId, n.id) }
+                }
+            }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
         Box(
             modifier = Modifier
                 .size(10.dp)
@@ -386,7 +400,6 @@ private fun NotificationBubble(
         Spacer(Modifier.width(12.dp))
 
         Column(Modifier.weight(1f)) {
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -409,15 +422,62 @@ private fun NotificationBubble(
 
             Text(
                 text = if (showStartsLabel)
-                    "Starts in 1 hour • $cleaned"
+                    "Starts at $cleaned"
                 else
                     cleaned,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DismissibleNotificationItem(
+    n: InAppNotification,
+    showStartsLabel: Boolean,
+    firebaseHelper: FirebaseHelper,
+    userId: String
+) {
+    val scope = rememberCoroutineScope()
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart ||
+                value == SwipeToDismissBoxValue.StartToEnd
+            ) {
+                NotificationCenter.dismiss(n.id)
+                scope.launch { firebaseHelper.dismissNotification(userId, n.id) }
+                true
+            } else false
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            // ✅ background only (no "Clear" label)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
+            )
+        }
+    ) {
+        NotificationBubble(
+            n = n,
+            showStartsLabel = showStartsLabel,
+            firebaseHelper = firebaseHelper,
+            userId = userId
+        )
+    }
+}
+
 
 @Composable
 private fun SectionHeader(text: String) {
