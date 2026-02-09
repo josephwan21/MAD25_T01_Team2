@@ -32,7 +32,7 @@ fun StudentCardScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // ⭐ Firestore User Data
+        // Firestore User Data
         Text("UID: ${user.uid}")
         Text("Username: ${user.username}")
         Text("Email: ${user.email}")
