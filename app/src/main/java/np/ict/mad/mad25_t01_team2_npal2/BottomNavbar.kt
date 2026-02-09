@@ -91,7 +91,7 @@ fun MAD25_T01_Team2_NPAL2App(
         NavigationSuiteScaffold(
             navigationSuiteItems = {
                 AppDestinations.entries
-                    .filter { it.showInNav } // ✅ hides Student Card from navbar
+                    .filter { it.showInNav } // hides Student Card from navbar
                     .forEach { dest ->
                         item(
                             icon = { Icon(dest.icon, contentDescription = dest.label) },
@@ -147,7 +147,7 @@ fun MAD25_T01_Team2_NPAL2App(
                 when (currentDestination) {
                     AppDestinations.HOME ->
                         HomeScreenContent(
-                            user = user, // ✅ Emily: pass user into Home
+                            user = user,
                             onOpenStudentCard = { currentDestination = AppDestinations.STUDENT_CARD },
                             onTaskClick = { currentDestination = AppDestinations.TASKS },
                             modifier = Modifier.padding(innerPadding)
@@ -193,7 +193,7 @@ fun MAD25_T01_Team2_NPAL2App(
 
                     AppDestinations.STUDENT_CARD ->
                         StudentCardScreen(
-                            user = user, // ✅ Emily: pass user into StudentCard page
+                            user = user,
                             onBack = { currentDestination = AppDestinations.HOME }
                         )
                 }
