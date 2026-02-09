@@ -293,7 +293,8 @@ fun TaskListUI(
     val monthYear = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calendar.time)
 
     val days = remember { getNext7Days() }
-
+    val context = LocalContext.current
+    val notificationsEnabled = isNotificationsEnabled(context)
     var selectedDay by remember { mutableStateOf(days.first()) }
 
 
@@ -319,14 +320,28 @@ fun TaskListUI(
                     IconButton(onClick = onOpenNotifications) {
                         BadgedBox(
                             badge = {
-                                if (notifsSynced && unread > 0) {
-                                    Badge { Text(unread.toString()) }
+                                if (
+                                    notificationsEnabled &&
+                                    notifsSynced &&
+                                    unread > 0
+                                ) {
+                                    Badge {
+                                        Text(unread.toString())
+                                    }
                                 }
                             }
                         ) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                tint = if (notificationsEnabled)
+                                    MaterialTheme.colorScheme.onSurface
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
+
                 }
             )
         },
