@@ -26,7 +26,6 @@ data class UserProfile(
     val email: String = ""
 )
 
-class FirebaseHelper {
 data class LocationFeedback(
     val id: String = "",
     val userId: String = "",
@@ -35,6 +34,8 @@ data class LocationFeedback(
     val comment: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )
+
+class FirebaseHelper {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -119,10 +120,6 @@ data class LocationFeedback(
             false
         }
     }
-    suspend fun signUp(username: String, password: String): Boolean
-    {
-        return try{
-
     suspend fun signUp(username: String, password: String): Boolean {
         return try {
             val email = toEmail(username)
@@ -141,7 +138,7 @@ data class LocationFeedback(
         return try {
             val credential = EmailAuthProvider.getCredential(email, password)
             user.reauthenticate(credential).await()
-            true
+                true
         } catch (e: Exception) {
             Log.e("FirebaseHelper", "Re-authentication failed", e)
             false
@@ -403,7 +400,7 @@ data class LocationFeedback(
             null
         }
     }
-    /*
+
     suspend fun getAverageRating(locationName: String): Float {
         return try {
             val feedbacks = getLocationFeedback(locationName)
@@ -416,7 +413,7 @@ data class LocationFeedback(
             Log.e("FirebaseHelper", "Calculating average rating failed", e)
             0f
         }
-    }*/
+    }
 
     suspend fun updateLocationFeedback(
         feedbackId: String,
@@ -443,6 +440,5 @@ data class LocationFeedback(
             false
         }
     }
-
-
 }
+
