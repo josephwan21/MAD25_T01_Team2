@@ -50,7 +50,6 @@ Students must navigate multiple systems to perform basic tasks such as checking 
 - Mobile Calendar Apps (Google Calendar, Apple Calendar)
   - Used by students for general task tracking.
   - Lacks integration with school-specific events, maps, and task notifications.
-  - Cannot sync automatically with school timetables or course data.
   
 ### Motivation
 - The exisiting NPAL2 mobile application and the NPAL website are **inconsistent**.
@@ -90,13 +89,7 @@ Allows student to track assignments, projects, and personal tasks, with reminder
 Provides a detailed, interactive map of the campus with navigation features, showing locations of classrooms, labs, administrative offices, and amenities.
 ### 5. Notifications & Alerts
 Sends real-time updates about timetable changes, announcements, deadlines, and campus alerts/information, ensuring students stay informed about important events.
-### 6. Security & Account Protection
-
-#### 6.1 Encrypted Login
-Ensures that all login and personal data are encrypted, safeguarding student information from unauthorised access.
-#### 6.2 Biometric Authentication
-Adds an extra layer of security with fingerprint, making the login process both safe and convenient.
-### 7. Settings & Personalization
+### 6. Settings & Personalization
 Allows students to customise app preferences, notification settings, and display options, creating a tailored and comfortable user experience.
 
 ---
@@ -120,7 +113,6 @@ Allows students to customise app preferences, notification settings, and display
 
 ### Joseph
 - Task Management
-- Biometric Login
 
 ### Monisha
 - Student Calendar
@@ -135,7 +127,6 @@ Allows students to customise app preferences, notification settings, and display
 ### Emily
 
 ### Joseph
-- Encrypted Login
 - Settings & Personalization
 
 ### Monisha
