@@ -53,6 +53,7 @@ import androidx.compose.foundation.gestures.calculateCentroidSize
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -62,6 +63,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 data class GpsCoordinates(val latitude: Double, val longitude: Double)
 
@@ -77,6 +81,7 @@ data class TappableRegion(
     val description: String,
     val rect: Rect,
     val gpsBox: GpsBoundingBox,
+    val icon: ImageVector,
     val backgroundColor: Color
 )
 
@@ -91,15 +96,78 @@ fun Color.darken(factor: Float = 0.7f): Color {
 }
 
 private val tappableRegions = listOf(
-    TappableRegion("Main Entrance", "The main point of entry to the campus. A common meeting spot.", Rect(973f, 1655f, 1106f, 1783f), GpsBoundingBox(GpsCoordinates(1.378, 103.849), GpsCoordinates(1.376, 103.847)),Color.LightGray),
-    TappableRegion("Convention Centre", "A large venue for events, conferences, and exhibitions.", Rect(813f, 1061f, 941f, 1212f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color.Cyan),
-    TappableRegion("Atrium/Library", "A quiet place for study and research, with a vast collection of books.", Rect(1100f, 1396f, 1194f, 1542f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFF2196F3)),
-    TappableRegion("Field", "An open green space for sports and recreational activities.", Rect(1561f, 1512f, 1856f, 1644f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFF4CAF50)),
-    TappableRegion("Back Entrance", "A secondary entrance providing access to the rear of the campus.", Rect(1779f, 1300f, 1842f, 1365f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color.LightGray),
-    TappableRegion("SIT", "The Singapore Institute of Technology building.", Rect(1167f, 827f, 1257f, 942f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFF44336)),
-    TappableRegion("Makan Place", "A popular food court offering a variety of local dishes.", Rect(599f, 873f, 719f, 926f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500)),
-    TappableRegion("Food Club", "Another dining option on campus with diverse food choices.", Rect(1251f, 1125f, 1357f, 1178f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500)),
-    TappableRegion("Munch", "A cafe perfect for a quick snack or coffee break.", Rect(605f, 1455f, 723f, 1500f), GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),Color(0xFFFFA500))
+    TappableRegion(
+        "Main Entrance",
+        "The main point of entry to the campus. A common meeting spot.",
+        Rect(973f, 1655f, 1106f, 1783f),
+        GpsBoundingBox(GpsCoordinates(1.378, 103.849), GpsCoordinates(1.376, 103.847)),
+        Icons.Filled.Home,
+        Color(0xFF2196F3)
+    ),
+    TappableRegion(
+        "Convention Centre",
+        "A large venue for events, conferences, and exhibitions.",
+        Rect(813f, 1061f, 941f, 1212f),
+        GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
+        Icons.Filled.Event,
+        Color(0xFF9C27B0)
+    ),
+    TappableRegion(
+        "Atrium/Library",
+        "A quiet place for study and research, with a vast collection of books.",
+        Rect(1100f, 1396f, 1194f, 1542f),
+        GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
+        Icons.Filled.LocalLibrary,
+        Color(0xFF3F51B5)
+    ),
+    TappableRegion(
+        "Field",
+        "An open green space for sports and recreational activities.",
+        Rect(1561f, 1512f, 1856f, 1644f),
+        GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
+        Icons.Filled.SportsScore,
+        Color(0xFF4CAF50)
+    ),
+    TappableRegion(
+        "Back Entrance",
+        "A secondary entrance providing access to the rear of the campus.",
+        Rect(1779f, 1300f, 1842f, 1365f),
+        GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
+        Icons.Filled.DoorSliding,
+        Color(0xFF607D8B)
+    ),
+    TappableRegion(
+        "SIT",
+        "The Singapore Institute of Technology building.",
+        Rect(1167f, 827f, 1257f, 942f),
+        GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
+        Icons.Filled.School,
+        Color(0xFFF44336)
+    ),
+    TappableRegion(
+        "Makan Place",
+        "A popular food court offering a variety of local dishes.",
+        Rect(599f, 873f, 719f, 926f),
+        GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
+        Icons.Filled.Restaurant,
+        Color(0xFFFF9800)
+    ),
+    TappableRegion(
+        "Food Club",
+        "Another dining option on campus with diverse food choices.",
+        Rect(1251f, 1125f, 1357f, 1178f),
+        GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
+        Icons.Filled.Restaurant,
+        Color(0xFFFF5722)
+    ),
+    TappableRegion(
+        "Munch",
+        "A cafe perfect for a quick snack or coffee break.",
+        Rect(605f, 1455f, 723f, 1500f),
+        GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
+        Icons.Filled.Fastfood,
+        Color(0xFF795548)
+    )
 )
 
 @Composable
@@ -164,7 +232,7 @@ fun LocationDashboard(
             .padding(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = region.backgroundColor
+            containerColor = Color.White
         ),
         border = BorderStroke(3.dp, region.backgroundColor.darken())
     ) {
@@ -181,21 +249,46 @@ fun LocationDashboard(
                             awaitFirstDown()
                             onToggleExpand()
                         }
-                    },
+                    }
+                    .padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Colored icon representing the location
+                Card(
+                    modifier = Modifier.size(60.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = region.backgroundColor
+                    ),
+                    elevation = CardDefaults.cardElevation(4.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = region.icon,
+                            contentDescription = region.name,
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = region.name,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color(0xFF37474F)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = region.description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Black
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF546E7A)
                     )
                 }
             }
@@ -208,10 +301,10 @@ fun LocationDashboard(
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = if (existingFeedback != null) "Update your rating:" else "Rate this location:",
+                        text = if (existingFeedback != null) "Update your feedback:" else "Leave feedback:",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color(0xFF37474F)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     StarRatingBar(
@@ -228,7 +321,7 @@ fun LocationDashboard(
                         text = if (existingFeedback != null) "Update your feedback:" else "Leave feedback:",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color(0xFF37474F)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
@@ -241,9 +334,21 @@ fun LocationDashboard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(120.dp),
-                        placeholder = { Text("Share your experience...") },
+                        placeholder = {
+                            Text(
+                                "Share your experience...",
+                                color = Color(0xFF90A4AE)
+                            )
+                        },
                         maxLines = 5,
-                        enabled = !isSubmitting
+                        enabled = !isSubmitting,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFDD835),
+                            unfocusedBorderColor = Color(0xFFBDBDBD),
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -284,9 +389,21 @@ fun LocationDashboard(
                             }
                         },
                         modifier = Modifier.align(Alignment.End),
-                        enabled = userRating > 0 && !isSubmitting && currentUserId != null
+                        enabled = userRating > 0 && !isSubmitting && currentUserId != null,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFDD835), // Golden yellow
+                            contentColor = Color(0xFF37474F) // Dark text
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 4.dp,
+                            pressedElevation = 8.dp
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(if (isSubmitting) "Submitting..." else if (existingFeedback != null) "Update Feedback" else "Submit Feedback")
+                        Text(
+                            text = if (isSubmitting) "Submitting..." else if (existingFeedback != null) "Update Feedback" else "Submit Feedback",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     if (showSuccessMessage) {

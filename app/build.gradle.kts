@@ -67,4 +67,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("com.google.firebase:firebase-firestore")
+    //Icons
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
 }
