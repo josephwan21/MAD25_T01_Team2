@@ -119,6 +119,9 @@ data class LocationFeedback(
             false
         }
     }
+    suspend fun signUp(username: String, password: String): Boolean
+    {
+        return try{
 
     suspend fun signUp(username: String, password: String): Boolean {
         return try {
@@ -336,4 +339,110 @@ data class LocationFeedback(
             false
         }
     }
+    //School Map Function
+    fun getCurrentUserId(): String? {
+        return auth.currentUser?.uid
+    }
+
+    suspend fun saveLocationFeedback(
+        userId: String,
+        locationName: String,
+        rating: Int,
+        comment: String
+    ): Boolean {
+        return try {
+            val newDoc = db.collection("locations")
+                .document(locationName)
+                .collection("reviews")
+                .document()
+
+            val feedback = LocationFeedback(
+                id = newDoc.id,
+                userId = userId,
+                locationName = locationName,
+                rating = rating,
+                comment = comment,
+                timestamp = System.currentTimeMillis()
+            )
+
+            newDoc.set(feedback).await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Save Feedback Failed", e)
+            false
+        }
+    }
+
+    suspend fun getLocationFeedback(locationName: String): List<LocationFeedback> {
+        return try {
+            val snapshot = db.collection("locations")
+                .document(locationName)
+                .collection("reviews")
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { it.toObject(LocationFeedback::class.java) }
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Fetching feedback failed", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getUserFeedbackForLocation(userId: String, locationName: String): LocationFeedback? {
+        return try {
+            val snapshot = db.collection("locations")
+                .document(locationName)
+                .collection("reviews")
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+
+            snapshot.documents.firstOrNull()?.toObject(LocationFeedback::class.java)
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Fetching user feedback failed", e)
+            null
+        }
+    }
+    /*
+    suspend fun getAverageRating(locationName: String): Float {
+        return try {
+            val feedbacks = getLocationFeedback(locationName)
+            if (feedbacks.isEmpty()) {
+                0f
+            } else {
+                feedbacks.map { it.rating }.average().toFloat()
+            }
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Calculating average rating failed", e)
+            0f
+        }
+    }*/
+
+    suspend fun updateLocationFeedback(
+        feedbackId: String,
+        locationName: String,
+        rating: Int,
+        comment: String
+    ): Boolean {
+        return try {
+            db.collection("locations")
+                .document(locationName)
+                .collection("reviews")
+                .document(feedbackId)
+                .update(
+                    mapOf(
+                        "rating" to rating,
+                        "comment" to comment,
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                )
+                .await()
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseHelper", "Update Feedback Failed", e)
+            false
+        }
+    }
+
+
 }
