@@ -9,9 +9,12 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +34,11 @@ fun MAD25_T01_Team2_NPAL2App(
     val context = LocalContext.current
     var isDarkMode by rememberSaveable {
         mutableStateOf(ThemePrefs.loadDarkMode(context))
+    }
+    val colorScheme = if (isDarkMode) {
+        darkColorScheme()
+    } else {
+        lightColorScheme()
     }
 
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
@@ -57,106 +65,109 @@ fun MAD25_T01_Team2_NPAL2App(
             android.util.Log.e("TaskReminder", "run failed", e)
         }
     }
-
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach { dest ->
-                item(
-                    icon = { Icon(dest.icon, contentDescription = dest.label) },
-                    label = { Text(dest.label) },
-                    selected = dest == currentDestination,
-                    onClick = {
-                        showNotifications = false
-                        settingsSubScreen = null
-                        currentDestination = dest
-                    }
-                )
-            }
-        }
+    MaterialTheme(
+        colorScheme = colorScheme
     ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-
-            //  Settings subscreens
-            settingsSubScreen?.let { subScreen ->
-                when (subScreen) {
-                    SettingsSubScreen.NOTIFICATIONS ->
-                        NotificationSettingsScreen(
-                            onBack = { settingsSubScreen = null },
-                            modifier = Modifier
-                        )
-
-                    SettingsSubScreen.ACCOUNT ->
-                        AccountScreen(
-                            onBack = { settingsSubScreen = null },
-                            firebaseHelper = firebaseHelper,
-                            modifier = Modifier
-                        )
-
-                    SettingsSubScreen.SUPPORT ->
-                        HelpSupportScreen(
-                            onBack = { settingsSubScreen = null },
-                            modifier = Modifier
-                        )
-                }
-                return@Scaffold
-            }
-
-            //  Fullscreen notifications screen
-            if (showNotifications) {
-                NotificationsScreen(
-                    firebaseHelper = firebaseHelper,
-                    userId = currentUserId,
-                    onBack = { showNotifications = false }
-                )
-                return@Scaffold
-            }
-
-            // Main navigation content
-            when (currentDestination) {
-                AppDestinations.HOME ->
-                    HomeScreenContent(
-                        onTaskClick = { currentDestination = AppDestinations.TASKS },
-                        modifier = Modifier.padding(innerPadding)
+        NavigationSuiteScaffold(
+            navigationSuiteItems = {
+                AppDestinations.entries.forEach { dest ->
+                    item(
+                        icon = { Icon(dest.icon, contentDescription = dest.label) },
+                        label = { Text(dest.label) },
+                        selected = dest == currentDestination,
+                        onClick = {
+                            showNotifications = false
+                            settingsSubScreen = null
+                            currentDestination = dest
+                        }
                     )
+                }
+            }
+        ) {
+            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 
-                AppDestinations.TASKS ->
-                    TaskListScreenContent(
+                //  Settings subscreens
+                settingsSubScreen?.let { subScreen ->
+                    when (subScreen) {
+                        SettingsSubScreen.NOTIFICATIONS ->
+                            NotificationSettingsScreen(
+                                onBack = { settingsSubScreen = null },
+                                modifier = Modifier
+                            )
+
+                        SettingsSubScreen.ACCOUNT ->
+                            AccountScreen(
+                                onBack = { settingsSubScreen = null },
+                                firebaseHelper = firebaseHelper,
+                                modifier = Modifier
+                            )
+
+                        SettingsSubScreen.SUPPORT ->
+                            HelpSupportScreen(
+                                onBack = { settingsSubScreen = null },
+                                modifier = Modifier
+                            )
+                    }
+                    return@Scaffold
+                }
+
+                //  Fullscreen notifications screen
+                if (showNotifications) {
+                    NotificationsScreen(
                         firebaseHelper = firebaseHelper,
                         userId = currentUserId,
-                        onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
-                        onOpenNotifications = { showNotifications = true },
-                        modifier = Modifier.padding(innerPadding)
+                        onBack = { showNotifications = false }
                     )
+                    return@Scaffold
+                }
 
-                AppDestinations.CREATE_TASKS ->
-                    CreateTaskScreen(
-                        onBack = { currentDestination = AppDestinations.TASKS },
-                        firebaseHelper = firebaseHelper,
-                        userId = currentUserId
-                    )
+                // Main navigation content
+                when (currentDestination) {
+                    AppDestinations.HOME ->
+                        HomeScreenContent(
+                            onTaskClick = { currentDestination = AppDestinations.TASKS },
+                            modifier = Modifier.padding(innerPadding)
+                        )
 
-                AppDestinations.CALENDAR ->
-                    StudentCalendarScreen(
-                        firebaseHelper = firebaseHelper,
-                        userId = currentUserId
-                    )
+                    AppDestinations.TASKS ->
+                        TaskListScreenContent(
+                            firebaseHelper = firebaseHelper,
+                            userId = currentUserId,
+                            onCreateTask = { currentDestination = AppDestinations.CREATE_TASKS },
+                            onOpenNotifications = { showNotifications = true },
+                            modifier = Modifier.padding(innerPadding)
+                        )
 
-                AppDestinations.MAP -> SchoolMap()
+                    AppDestinations.CREATE_TASKS ->
+                        CreateTaskScreen(
+                            onBack = { currentDestination = AppDestinations.TASKS },
+                            firebaseHelper = firebaseHelper,
+                            userId = currentUserId
+                        )
 
-                AppDestinations.SETTINGS ->
-                    SettingsScreen(
-                        onLogout = onLogout,
-                        onAccountClick = { settingsSubScreen = SettingsSubScreen.ACCOUNT },
-                        onNotificationsClick = { settingsSubScreen = SettingsSubScreen.NOTIFICATIONS },
-                        onHelpClick = { settingsSubScreen = SettingsSubScreen.SUPPORT },
-                        isDarkMode = isDarkMode,
-                        onDarkModeToggle = {
-                            isDarkMode = it
-                            ThemePrefs.saveDarkMode(context, it)
-                        },
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    AppDestinations.CALENDAR ->
+                        StudentCalendarScreen(
+                            firebaseHelper = firebaseHelper,
+                            userId = currentUserId
+                        )
 
+                    AppDestinations.MAP -> SchoolMap()
+
+                    AppDestinations.SETTINGS ->
+                        SettingsScreen(
+                            onLogout = onLogout,
+                            onAccountClick = { settingsSubScreen = SettingsSubScreen.ACCOUNT },
+                            onNotificationsClick = { settingsSubScreen = SettingsSubScreen.NOTIFICATIONS },
+                            onHelpClick = { settingsSubScreen = SettingsSubScreen.SUPPORT },
+                            isDarkMode = isDarkMode,
+                            onDarkModeToggle = {
+                                isDarkMode = it
+                                ThemePrefs.saveDarkMode(context, it)
+                            },
+                            modifier = Modifier.padding(innerPadding)
+                        )
+
+                }
             }
         }
     }
