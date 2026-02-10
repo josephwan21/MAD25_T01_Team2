@@ -369,7 +369,7 @@ fun StudentCalendarScreen(
 
     //  show full details of task
     selectedTask?.let { task ->
-
+        
         val taskCategory = runCatching { TaskCategory.valueOf(task.category) }
             .getOrElse { TaskCategory.PERSONAL }
 
@@ -469,7 +469,7 @@ fun StudentCalendarScreen(
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 
-                    // Edit (optional)
+                    // Edit 
                     TextButton(
                         onClick = {
                             selectedTask = null
@@ -487,10 +487,9 @@ fun StudentCalendarScreen(
             },
 
             dismissButton = {
-                // Delete (optional) – remove if you don’t want delete here
+                // Delete 
                 TextButton(
                     onClick = {
-                        // you already have scope + firebaseHelper + userId + allTasks in your screen
                         scope.launch {
                             firebaseHelper.deleteTask(userId, task.id)
                             allTasks = firebaseHelper.getTasks(userId)
