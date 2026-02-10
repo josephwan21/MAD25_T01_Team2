@@ -125,7 +125,8 @@ Allows students to customise app preferences, notification settings, and display
 ## 6. Planned task(s) and feature(s) allocation for Stage 2.
 
 ### Emily
-
+- Home Screen & Student Card View
+  
 ### Joseph
 - Settings & Personalization
 
