@@ -69,8 +69,6 @@ Students must navigate multiple systems to perform basic tasks such as checking 
 Allows students to securely log in using their NP username and password, providing access to personalised academic and campus services.
 #### 1.2 First Time Student Set-Up Page
 Guides new students through initial account setup
-#### 1.3 Biometric Login
-Enables secure and convenient access using the user's fingerprint, reducing the need to repeatedly enter login credentials. To account for specific devices that may not have this feature, users will still be defaulted to entering their user account credentials.
 
 ### 2. Student Identity & Campus Access
 
