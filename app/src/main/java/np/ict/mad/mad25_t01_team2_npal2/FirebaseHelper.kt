@@ -410,7 +410,7 @@ class FirebaseHelper {
 
 
 
-    //School Map Function
+    /* -------------------- School Map -------------------- */
     fun getCurrentUserId(): String? {
         return auth.currentUser?.uid
     }
@@ -472,20 +472,6 @@ class FirebaseHelper {
         } catch (e: Exception) {
             Log.e("FirebaseHelper", "Fetching user feedback failed", e)
             null
-        }
-    }
-
-    suspend fun getAverageRating(locationName: String): Float {
-        return try {
-            val feedbacks = getLocationFeedback(locationName)
-            if (feedbacks.isEmpty()) {
-                0f
-            } else {
-                feedbacks.map { it.rating }.average().toFloat()
-            }
-        } catch (e: Exception) {
-            Log.e("FirebaseHelper", "Calculating average rating failed", e)
-            0f
         }
     }
 

@@ -1073,6 +1073,10 @@ fun DatePickerField(
     )
 }
 
+fun isValidTime(input: String): Boolean {
+    val regex = Regex("^([01]\\d|2[0-3]):([0-5]\\d)$")
+    return regex.matches(input)
+}
 @Composable
 fun StartTimePickerField(
     time: TextFieldValue,
@@ -1095,12 +1099,19 @@ fun StartTimePickerField(
 
             val cursorPos = formatted.length
 
-            onTimeSelected(
-                TextFieldValue(
-                    text = formatted,
-                    selection = TextRange(cursorPos)
+
+            if (cursorPos == 5 && !isValidTime(formatted)) {
+                Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
+                onTimeSelected(TextFieldValue(""))
+            }
+            else {
+                onTimeSelected(
+                    TextFieldValue(
+                        text = formatted,
+                        selection = TextRange(cursorPos)
+                    )
                 )
-            )
+            }
         },
         label = { Text("Start Time") },
         trailingIcon = {
@@ -1169,12 +1180,18 @@ fun EndTimePickerField(
 
             val cursorPos = formatted.length
 
-            onTimeSelected(
-                TextFieldValue(
-                    text = formatted,
-                    selection = TextRange(cursorPos)
+            if (cursorPos == 5 && !isValidTime(formatted)) {
+                Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
+                onTimeSelected(TextFieldValue(""))
+            }
+            else {
+                onTimeSelected(
+                    TextFieldValue(
+                        text = formatted,
+                        selection = TextRange(cursorPos)
+                    )
                 )
-            )
+            }
         },
         label = { Text("End Time") },
         trailingIcon = {

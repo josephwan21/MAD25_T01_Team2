@@ -1,6 +1,5 @@
 package np.ict.mad.mad25_t01_team2_npal2
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -148,7 +147,7 @@ private val tappableRegions = listOf(
     TappableRegion(
         "Makan Place",
         "A popular food court offering a variety of local dishes.",
-        Rect(599f, 873f, 719f, 926f),
+        Rect(600f, 872f, 719f, 926f),
         GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
         Icons.Filled.Restaurant,
         Color(0xFFFF9800)
@@ -156,18 +155,18 @@ private val tappableRegions = listOf(
     TappableRegion(
         "Food Club",
         "Another dining option on campus with diverse food choices.",
-        Rect(1251f, 1125f, 1357f, 1178f),
+        Rect(1247f, 1127f, 1356f, 1175f),
         GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
         Icons.Filled.Restaurant,
-        Color(0xFFFF5722)
+        Color(0xFFFF9800)
     ),
     TappableRegion(
         "Munch",
         "A cafe perfect for a quick snack or coffee break.",
-        Rect(605f, 1455f, 723f, 1500f),
+        Rect(603f, 1449f, 722f, 1505f),
         GpsBoundingBox(GpsCoordinates(0.0, 0.0), GpsCoordinates(0.0, 0.0)),
         Icons.Filled.Fastfood,
-        Color(0xFF795548)
+        Color(0xFFFF9800)
     )
 )
 
@@ -336,7 +335,7 @@ fun LocationDashboard(
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Your Rating Section
+                    // Rating Section
                     Text(
                         text = if (existingFeedback != null) "Update Your Rating:" else "Rate This Location:",
                         style = MaterialTheme.typography.titleMedium,
@@ -513,7 +512,6 @@ fun LocationDashboard(
     }
 }
 
-@SuppressLint("DefaultLocale")
 @Composable
 fun ZoomControls(
     currentZoom: Float,
@@ -628,7 +626,7 @@ fun SchoolMap() {
         val imageIntrinsicSize = painter.intrinsicSize
         if (viewSize == IntSize.Zero || imageIntrinsicSize == Size.Zero) return
 
-        val pinOffset = 3.5f * scale
+        val pinOffset = 3f * scale
         val viewCenter = Offset(viewSize.width / 2f, viewSize.height / 2f + pinOffset)
 
         val viewAspectRatio = viewSize.width.toFloat() / viewSize.height.toFloat()
@@ -961,7 +959,7 @@ fun SchoolMap() {
                     modifier = Modifier
                         .size(80.dp)
                         .graphicsLayer {
-                            alpha = if (isInteracting) 0.7f else 1f
+                            alpha = if (isInteracting) 0.4f else 1f
                         }
                 )
             }

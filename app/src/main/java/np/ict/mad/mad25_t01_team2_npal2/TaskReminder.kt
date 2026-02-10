@@ -33,17 +33,15 @@ object TaskReminder {
                 NotificationCenter.pushOnce(
                     context = context,
                     firebaseHelper = firebaseHelper,
-                    // stable key (don’t rely only on task.id)
                     key = "starts1h-${task.date}-${task.startTime}-${task.endTime}-${task.title}",
                     userId = userId,
                     title = task.title,
-                    // store message WITHOUT duplicating label in UI if you want
                     message = "Starts in 1 hour • $timeRange",
                     timestamp = now,
                     taskCategory = task.category
                 )
             } else {
-                // Optional: keep this if you want “Today” reminders for all tasks
+
                 NotificationCenter.pushOnce(
                     context = context,
                     firebaseHelper = firebaseHelper,
