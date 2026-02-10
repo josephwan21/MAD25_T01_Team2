@@ -133,7 +133,10 @@ Allows students to customise app preferences, notification settings, and display
 - Improved Student Calendar
 
 ### Thomas
-- Personalised Navigation for the School Map
+- Navigation for the School Map
+- Location rating and feedback
+- Zoom feature
+  
 ## 7. LLM Usage Declaration
 For the development phase of the assignment, our team plans to use a Large Language Model, specifically, ChatGPT (GPT-5 mini) in this case, to provide guidance, suggest coding or design approaches, and help structure technical documentation. 
 
