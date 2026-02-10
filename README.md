@@ -130,6 +130,7 @@ Allows students to customise app preferences, notification settings, and display
 
 ### Monisha
 - Notifications and alerts
+- Improved Student Calendar
 
 ### Thomas
 - Personalised Navigation for the School Map
